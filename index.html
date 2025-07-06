@@ -1,0 +1,438 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Warhammer Fantasy Roleplay Character Sheet</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="character-sheet">
+        <header class="sheet-header">
+            <h1>Warhammer Fantasy Roleplay</h1>
+            <h2>Character Sheet</h2>
+        </header>
+        
+        <div class="character-info">
+            <div class="info-row">
+                <div class="field">
+                    <label>Name:</label>
+                    <input type="text" id="name" name="name">
+                </div>
+                <div class="field">
+                    <label>Species:</label>
+                    <input type="text" id="species" name="species">
+                </div>
+                <div class="field">
+                    <label>Class:</label>
+                    <input type="text" id="class" name="class">
+                </div>
+            </div>
+            <div class="info-row">
+                <div class="field">
+                    <label>Career:</label>
+                    <input type="text" id="career" name="career">
+                </div>
+                <div class="field">
+                    <label>Career Level:</label>
+                    <input type="text" id="career-level" name="career-level">
+                </div>
+            </div>
+            <div class="info-row">
+                <div class="field">
+                    <label>Career Path:</label>
+                    <input type="text" id="career-path" name="career-path">
+                </div>
+                <div class="field">
+                    <label>Status:</label>
+                    <input type="text" id="status" name="status">
+                </div>
+            </div>
+            <div class="info-row">
+                <div class="field">
+                    <label>Age:</label>
+                    <input type="text" id="age" name="age">
+                </div>
+                <div class="field">
+                    <label>Height:</label>
+                    <input type="text" id="height" name="height">
+                </div>
+                <div class="field">
+                    <label>Hair:</label>
+                    <input type="text" id="hair" name="hair">
+                </div>
+                <div class="field">
+                    <label>Eyes:</label>
+                    <input type="text" id="eyes" name="eyes">
+                </div>
+            </div>
+        </div>
+
+        <div class="sheet-main">
+            <div class="combined-stats">
+                <div class="fate-section">
+                    <h3>Fate</h3>
+                    <div class="stat-group">
+                        <div class="stat-item">
+                            <label>Fate:</label>
+                            <input type="number" id="fate" name="fate">
+                        </div>
+                        <div class="stat-item">
+                            <label>Fortune:</label>
+                            <input type="number" id="fortune" name="fortune">
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="resilience-section">
+                    <h3>Resilience</h3>
+                    <div class="stat-group">
+                        <div class="stat-item">
+                            <label>Resilience:</label>
+                            <input type="number" id="resilience" name="resilience">
+                        </div>
+                        <div class="stat-item">
+                            <label>Resolve:</label>
+                            <input type="number" id="resolve" name="resolve">
+                        </div>
+                        <div class="stat-item">
+                            <label>Motivation:</label>
+                            <input type="text" id="motivation" name="motivation">
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="movement-section">
+                    <h3>Movement</h3>
+                    <div class="stat-group">
+                        <div class="stat-item">
+                            <label>Movement:</label>
+                            <input type="number" id="movement" name="movement">
+                        </div>
+                        <div class="stat-item">
+                            <label>Walk:</label>
+                            <input type="number" id="walk" name="walk">
+                        </div>
+                        <div class="stat-item">
+                            <label>Run:</label>
+                            <input type="number" id="run" name="run">
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="experience-section">
+                    <h3>Experience</h3>
+                    <div class="stat-group">
+                        <div class="stat-item">
+                            <label>Current:</label>
+                            <input type="number" id="current-exp" name="current-exp">
+                        </div>
+                        <div class="stat-item">
+                            <label>Spent:</label>
+                            <input type="number" id="spent-exp" name="spent-exp">
+                        </div>
+                        <div class="stat-item">
+                            <label>Total:</label>
+                            <input type="number" id="total-exp" name="total-exp" readonly>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="characteristics">
+                <h3>Characteristics</h3>
+                <div class="char-table">
+                    <div class="char-headers">
+                        <div></div>
+                        <div>WS</div>
+                        <div>BS</div>
+                        <div>S</div>
+                        <div>T</div>
+                        <div>I</div>
+                        <div>Ag</div>
+                        <div>Dex</div>
+                        <div>Int</div>
+                        <div>WP</div>
+                        <div>Fel</div>
+                    </div>
+                    <div class="char-row">
+                        <div class="char-label">Initial</div>
+                        <div><input type="number" id="ws-initial" name="ws-initial" value="0"></div>
+                        <div><input type="number" id="bs-initial" name="bs-initial" value="0"></div>
+                        <div><input type="number" id="s-initial" name="s-initial" value="0"></div>
+                        <div><input type="number" id="t-initial" name="t-initial" value="0"></div>
+                        <div><input type="number" id="i-initial" name="i-initial" value="0"></div>
+                        <div><input type="number" id="ag-initial" name="ag-initial" value="0"></div>
+                        <div><input type="number" id="dex-initial" name="dex-initial" value="0"></div>
+                        <div><input type="number" id="int-initial" name="int-initial" value="0"></div>
+                        <div><input type="number" id="wp-initial" name="wp-initial" value="0"></div>
+                        <div><input type="number" id="fel-initial" name="fel-initial" value="0"></div>
+                    </div>
+                    <div class="char-row">
+                        <div class="char-label">Advances</div>
+                        <div><input type="number" id="ws-advances" name="ws-advances" value="0"></div>
+                        <div><input type="number" id="bs-advances" name="bs-advances" value="0"></div>
+                        <div><input type="number" id="s-advances" name="s-advances" value="0"></div>
+                        <div><input type="number" id="t-advances" name="t-advances" value="0"></div>
+                        <div><input type="number" id="i-advances" name="i-advances" value="0"></div>
+                        <div><input type="number" id="ag-advances" name="ag-advances" value="0"></div>
+                        <div><input type="number" id="dex-advances" name="dex-advances" value="0"></div>
+                        <div><input type="number" id="int-advances" name="int-advances" value="0"></div>
+                        <div><input type="number" id="wp-advances" name="wp-advances" value="0"></div>
+                        <div><input type="number" id="fel-advances" name="fel-advances" value="0"></div>
+                    </div>
+                    <div class="char-row">
+                        <div class="char-label">Current</div>
+                        <div><input type="number" id="ws-current" name="ws-current" readonly value="0"></div>
+                        <div><input type="number" id="bs-current" name="bs-current" readonly value="0"></div>
+                        <div><input type="number" id="s-current" name="s-current" readonly value="0"></div>
+                        <div><input type="number" id="t-current" name="t-current" readonly value="0"></div>
+                        <div><input type="number" id="i-current" name="i-current" readonly value="0"></div>
+                        <div><input type="number" id="ag-current" name="ag-current" readonly value="0"></div>
+                        <div><input type="number" id="dex-current" name="dex-current" readonly value="0"></div>
+                        <div><input type="number" id="int-current" name="int-current" readonly value="0"></div>
+                        <div><input type="number" id="wp-current" name="wp-current" readonly value="0"></div>
+                        <div><input type="number" id="fel-current" name="fel-current" readonly value="0"></div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="skills">
+                <h3>Basic Skills</h3>
+                <div class="skills-grid">
+                    <div class="skill-headers">
+                        <div>Name</div>
+                        <div>Characteristic</div>
+                        <div>Adv</div>
+                        <div>Skill</div>
+                    </div>
+                    <div class="skill-list" id="basic-skills"></div>
+                </div>
+            </div>
+
+            <div class="skills">
+                <h3>Advanced Skills</h3>
+                <div class="skills-grid">
+                    <div class="skill-headers">
+                        <div>Name</div>
+                        <div>Characteristic</div>
+                        <div>Adv</div>
+                        <div>Skill</div>
+                    </div>
+                    <div class="skill-list" id="advanced-skills"></div>
+                </div>
+                <div class="add-buttons">
+                    <button type="button" onclick="addAdvancedSkill()">Add Advanced Skill</button>
+                    <button type="button" onclick="window.characterSheet.saveAdvancedSkills()" class="save-button">Save Advanced Skills</button>
+                </div>
+            </div>
+
+            <div class="talents">
+                <h3>Talents</h3>
+                <div class="talents-grid">
+                    <div class="talent-headers">
+                        <div>Talent Name</div>
+                        <div>Times Taken</div>
+                        <div>Description</div>
+                    </div>
+                    <div class="talent-list" id="talents-list"></div>
+                </div>
+                <div class="add-buttons">
+                    <button type="button" onclick="addTalent()">Add Talent</button>
+                    <button type="button" onclick="window.characterSheet.saveTalents()" class="save-button">Save Talents</button>
+                </div>
+            </div>
+        </div>
+
+        <div class="combat-section">
+            <div class="wounds">
+                <h3>Wounds</h3>
+                <div class="wound-track">
+                    <div class="wound-item">
+                        <label>SB:</label>
+                        <input type="number" id="sb" name="sb">
+                    </div>
+                    <div class="wound-item">
+                        <label>TB+2:</label>
+                        <input type="number" id="tb-plus-2" name="tb-plus-2">
+                    </div>
+                    <div class="wound-item">
+                        <label>WPB:</label>
+                        <input type="number" id="wpb" name="wpb">
+                    </div>
+                    <div class="wound-item">
+                        <label>Hardy:</label>
+                        <input type="number" id="hardy" name="hardy">
+                    </div>
+                    <div class="wound-item">
+                        <label>Wounds:</label>
+                        <input type="number" id="wounds" name="wounds">
+                    </div>
+                </div>
+            </div>
+
+            <div class="weapons">
+                <h3>Weapons</h3>
+                <div class="weapons-grid">
+                    <div class="weapon-headers">
+                        <div>Name</div>
+                        <div>Group</div>
+                        <div>Enc</div>
+                        <div>Range/Reach</div>
+                        <div>Damage</div>
+                        <div>Qualities</div>
+                    </div>
+                    <div class="weapon-list" id="weapons-list"></div>
+                </div>
+                <div class="add-buttons">
+                    <button type="button" onclick="addWeapon()">Add Weapon</button>
+                </div>
+            </div>
+
+            <div class="armour">
+                <h3>Armour</h3>
+                <div class="armour-grid">
+                    <div class="armour-headers">
+                        <div>Name</div>
+                        <div>Locations</div>
+                        <div>Enc</div>
+                        <div>AP</div>
+                        <div>Qualities</div>
+                    </div>
+                    <div class="armour-list" id="armour-list"></div>
+                </div>
+                <div class="add-buttons">
+                    <button type="button" onclick="addArmour()">Add Armour</button>
+                </div>
+            </div>
+
+            <div class="trappings">
+                <h3>Trappings</h3>
+                <div class="trappings-grid">
+                    <div class="trapping-headers">
+                        <div>Name</div>
+                        <div>Enc</div>
+                    </div>
+                    <div class="trapping-list" id="trapping-list"></div>
+                </div>
+                <div class="add-buttons">
+                    <button type="button" onclick="addTrapping()">Add Trapping</button>
+                </div>
+            </div>
+
+            <div class="wealth">
+                <h3>Wealth</h3>
+                <div class="wealth-grid">
+                    <div class="wealth-item">
+                        <label>D:</label>
+                        <input type="number" id="wealth-d" name="wealth-d">
+                    </div>
+                    <div class="wealth-item">
+                        <label>SS:</label>
+                        <input type="number" id="wealth-ss" name="wealth-ss">
+                    </div>
+                    <div class="wealth-item">
+                        <label>GC:</label>
+                        <input type="number" id="wealth-gc" name="wealth-gc">
+                    </div>
+                </div>
+                <h4>Encumbrance</h4>
+                <div class="encumbrance-grid">
+                    <div class="enc-item">
+                        <label>Weapons:</label>
+                        <input type="number" id="enc-weapons" name="enc-weapons">
+                    </div>
+                    <div class="enc-item">
+                        <label>Armour:</label>
+                        <input type="number" id="enc-armour" name="enc-armour">
+                    </div>
+                    <div class="enc-item">
+                        <label>Trappings:</label>
+                        <input type="number" id="enc-trappings" name="enc-trappings">
+                    </div>
+                    <div class="enc-item">
+                        <label>Max Enc:</label>
+                        <input type="number" id="enc-max" name="enc-max">
+                    </div>
+                    <div class="enc-item">
+                        <label>Total:</label>
+                        <input type="number" id="enc-total" name="enc-total" readonly>
+                    </div>
+                </div>
+            </div>
+
+            <div class="spells-section">
+                <div class="spells">
+                    <h3>Spells and Prayers</h3>
+                    <div class="spells-grid">
+                        <div class="spell-headers">
+                            <div>Name</div>
+                            <div>CN</div>
+                            <div>Range</div>
+                            <div>Target</div>
+                            <div>Duration</div>
+                            <div>Effect</div>
+                        </div>
+                        <div class="spell-list" id="spells-list"></div>
+                    </div>
+                    <div class="add-buttons">
+                        <button type="button" onclick="addSpell()">Add Spell/Prayer</button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="psychology">
+                <h3>Psychology</h3>
+                <div class="psychology-content">
+                    <textarea id="psychology" name="psychology" placeholder="Psychology traits and conditions"></textarea>
+                </div>
+            </div>
+
+            <div class="corruption">
+                <h3>Corruption & Mutation</h3>
+                <div class="corruption-content">
+                    <textarea id="corruption" name="corruption" placeholder="Corruption points and mutations"></textarea>
+                </div>
+            </div>
+
+            <div class="ambitions">
+                <h3>Ambitions</h3>
+                <div class="ambition-group">
+                    <div class="ambition-item">
+                        <label>Short term:</label>
+                        <textarea id="short-ambition" name="short-ambition"></textarea>
+                    </div>
+                    <div class="ambition-item">
+                        <label>Long term:</label>
+                        <textarea id="long-ambition" name="long-ambition"></textarea>
+                    </div>
+                </div>
+            </div>
+
+            <div class="party">
+                <h3>Party</h3>
+                <div class="party-group">
+                    <div class="party-item">
+                        <label>Party Name:</label>
+                        <input type="text" id="party-name" name="party-name">
+                    </div>
+                    <div class="party-item">
+                        <label>Short term:</label>
+                        <textarea id="party-short" name="party-short"></textarea>
+                    </div>
+                    <div class="party-item">
+                        <label>Long term:</label>
+                        <textarea id="party-long" name="party-long"></textarea>
+                    </div>
+                    <div class="party-item">
+                        <label>Members:</label>
+                        <textarea id="party-members" name="party-members"></textarea>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>
