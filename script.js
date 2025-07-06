@@ -1,6 +1,7 @@
 class WFRPCharacterSheet {
     constructor() {
         this.character = this.loadCharacter();
+        this.advancedSkillsEditMode = false;
         this.basicSkills = [
             { name: "Art", characteristic: "Dex" },
             { name: "Athletics", characteristic: "Ag" },
@@ -175,8 +176,22 @@ class WFRPCharacterSheet {
         
         if (this.character.advancedSkills && this.character.advancedSkills.length > 0) {
             this.character.advancedSkills.forEach(skill => {
-            const skillRow = document.createElement('div');
-            skillRow.className = 'skill-row';
+                const skillRow = document.createElement('div');
+                skillRow.className = 'skill-row';
+                this.createAdvancedSkillRow(skillRow, skill, false); // false = read-only mode
+                container.appendChild(skillRow);
+                
+                // Add event listeners
+                this.addAdvancedSkillEventListeners(skillRow);
+            });
+        }
+        
+        // Set initial mode to read-only
+        this.setAdvancedSkillsMode(false);
+    }
+
+    createAdvancedSkillRow(skillRow, skill, editMode) {
+        if (editMode) {
             skillRow.innerHTML = `
                 <input type="text" placeholder="Skill name" class="skill-name" value="${skill.name || ''}">
                 <select class="skill-char">
@@ -191,16 +206,91 @@ class WFRPCharacterSheet {
                     <option value="WP" ${skill.characteristic === 'WP' ? 'selected' : ''}>WP</option>
                     <option value="Fel" ${skill.characteristic === 'Fel' ? 'selected' : ''}>Fel</option>
                 </select>
-                <input type="number" placeholder="0" class="skill-adv" value="${skill.advances || 0}">
-                <input type="number" readonly class="skill-total" value="0">
-                <button type="button" onclick="this.parentElement.remove(); showAdvancedSkillsSaveButton();">Remove</button>
+                <div class="skill-adv">
+                    <input type="number" placeholder="0" value="${skill.advances || 0}">
+                </div>
+                <div class="skill-total">
+                    <input type="number" readonly value="0">
+                </div>
+                <button type="button" class="remove-button" onclick="this.parentElement.remove(); showAdvancedSkillsSaveButton();">Remove</button>
             `;
-            container.appendChild(skillRow);
-            
-            // Add event listeners
-            this.addAdvancedSkillEventListeners(skillRow);
-            });
+        } else {
+            skillRow.innerHTML = `
+                <input type="text" readonly class="skill-name" value="${skill.name || ''}">
+                <input type="text" readonly class="skill-char" value="${skill.characteristic || 'WS'}">
+                <div class="skill-adv">
+                    <input type="number" placeholder="0" value="${skill.advances || 0}">
+                </div>
+                <div class="skill-total">
+                    <input type="number" readonly value="0">
+                </div>
+                <span class="remove-button"></span>
+            `;
         }
+    }
+
+    setAdvancedSkillsMode(editMode) {
+        this.advancedSkillsEditMode = editMode;
+        const skillsSection = document.getElementById('advanced-skills').closest('.skills');
+        const editButton = document.getElementById('edit-advanced-skills');
+        
+        if (editMode) {
+            skillsSection.classList.remove('advanced-skills-readonly');
+            skillsSection.classList.add('advanced-skills-edit');
+            editButton.textContent = 'Done';
+        } else {
+            skillsSection.classList.add('advanced-skills-readonly');
+            skillsSection.classList.remove('advanced-skills-edit');
+            editButton.textContent = 'Edit';
+        }
+        
+        // Re-populate skills with the new mode
+        this.repopulateAdvancedSkills();
+    }
+
+    repopulateAdvancedSkills() {
+        const container = document.getElementById('advanced-skills');
+        const skillRows = container.querySelectorAll('.skill-row');
+        
+        // Ensure the array exists
+        if (!this.character.advancedSkills) {
+            this.character.advancedSkills = [];
+        }
+        
+        skillRows.forEach((skillRow, index) => {
+            // Get current values before repopulating
+            const nameInput = skillRow.querySelector('.skill-name');
+            const charSelect = skillRow.querySelector('select.skill-char');
+            const charInput = skillRow.querySelector('input.skill-char');
+            const advInput = skillRow.querySelector('.skill-adv input');
+            
+            let skill = this.character.advancedSkills[index] || { name: '', characteristic: 'WS', advances: 0 };
+            
+            if (nameInput && advInput) {
+                skill.name = nameInput.value;
+                skill.advances = parseInt(advInput.value) || 0;
+                
+                if (charSelect) {
+                    skill.characteristic = charSelect.value;
+                } else if (charInput) {
+                    skill.characteristic = charInput.value;
+                }
+                
+                // Update the array
+                this.character.advancedSkills[index] = skill;
+            }
+            
+            this.createAdvancedSkillRow(skillRow, skill, this.advancedSkillsEditMode);
+            this.addAdvancedSkillEventListeners(skillRow);
+        });
+    }
+
+    toggleAdvancedSkillsEditMode() {
+        if (this.advancedSkillsEditMode) {
+            // Save when exiting edit mode
+            this.saveAdvancedSkills();
+        }
+        this.setAdvancedSkillsMode(!this.advancedSkillsEditMode);
     }
 
     populateTalents() {
@@ -350,37 +440,62 @@ class WFRPCharacterSheet {
     }
 
     addAdvancedSkillEventListeners(skillRow) {
-        const characteristicSelect = skillRow.querySelector('.skill-char');
-        const advancesInput = skillRow.querySelector('.skill-adv');
-        const skillNameInput = skillRow.querySelector('.skill-name');
-        const totalInput = skillRow.querySelector('.skill-total');
+        const advancesInput = skillRow.querySelector('.skill-adv input');
+        const totalInput = skillRow.querySelector('.skill-total input');
         
         const calculateAdvancedSkillTotal = () => {
-            const characteristic = characteristicSelect.value;
+            let characteristic;
+            const characteristicSelect = skillRow.querySelector('select.skill-char');
+            const characteristicInput = skillRow.querySelector('input.skill-char');
+            
+            if (characteristicSelect) {
+                characteristic = characteristicSelect.value;
+            } else if (characteristicInput) {
+                characteristic = characteristicInput.value;
+            } else {
+                characteristic = 'WS';
+            }
+            
             const advances = parseInt(advancesInput.value) || 0;
             const charValue = getCharacteristicValueByName(characteristic);
             totalInput.value = charValue + advances;
         };
         
         const showAdvancedSkillsSaveButton = () => {
-            const saveButtons = document.querySelectorAll('.save-button');
-            const advancedSkillsSaveButton = Array.from(saveButtons).find(btn => btn.textContent.includes('Advanced Skills'));
-            if (advancedSkillsSaveButton) {
-                advancedSkillsSaveButton.classList.add('show');
+            if (this.advancedSkillsEditMode) {
+                const saveButtons = document.querySelectorAll('.save-button');
+                const advancedSkillsSaveButton = Array.from(saveButtons).find(btn => btn.textContent.includes('Advanced Skills'));
+                if (advancedSkillsSaveButton) {
+                    advancedSkillsSaveButton.classList.add('show');
+                }
             }
         };
         
-        characteristicSelect.addEventListener('change', () => {
-            calculateAdvancedSkillTotal();
-            showAdvancedSkillsSaveButton();
-        });
-        
+        // Always add listener for advances input (editable in both modes)
         advancesInput.addEventListener('input', () => {
             calculateAdvancedSkillTotal();
-            showAdvancedSkillsSaveButton();
+            if (!this.advancedSkillsEditMode) {
+                // Auto-save advances in read-only mode
+                this.saveAdvancedSkills();
+            } else {
+                showAdvancedSkillsSaveButton();
+            }
         });
         
-        skillNameInput.addEventListener('input', showAdvancedSkillsSaveButton);
+        // Add listeners for edit mode elements
+        const characteristicSelect = skillRow.querySelector('select.skill-char');
+        const skillNameInput = skillRow.querySelector('input.skill-name');
+        
+        if (characteristicSelect) {
+            characteristicSelect.addEventListener('change', () => {
+                calculateAdvancedSkillTotal();
+                showAdvancedSkillsSaveButton();
+            });
+        }
+        
+        if (skillNameInput && !skillNameInput.readOnly) {
+            skillNameInput.addEventListener('input', showAdvancedSkillsSaveButton);
+        }
         
         // Calculate initial value
         calculateAdvancedSkillTotal();
@@ -391,9 +506,19 @@ class WFRPCharacterSheet {
         this.character.advancedSkills = [];
         
         advancedSkillRows.forEach(row => {
-            const name = row.querySelector('.skill-name').value || '';
-            const characteristic = row.querySelector('.skill-char').value || 'WS';
-            const advances = parseInt(row.querySelector('.skill-adv').value) || 0;
+            const nameInput = row.querySelector('.skill-name');
+            const charSelect = row.querySelector('select.skill-char');
+            const charInput = row.querySelector('input.skill-char');
+            const advInput = row.querySelector('.skill-adv input');
+            
+            const name = nameInput ? nameInput.value || '' : '';
+            let characteristic = 'WS';
+            if (charSelect) {
+                characteristic = charSelect.value || 'WS';
+            } else if (charInput) {
+                characteristic = charInput.value || 'WS';
+            }
+            const advances = advInput ? parseInt(advInput.value) || 0 : 0;
             
             // Always save the skill, even if empty, to maintain the row
             this.character.advancedSkills.push({
@@ -527,31 +652,23 @@ function addTalent() {
 }
 
 function addAdvancedSkill() {
+    if (!window.characterSheet.advancedSkillsEditMode) {
+        return; // Only allow adding skills in edit mode
+    }
+    
     const skillsList = document.getElementById('advanced-skills');
     const skillRow = document.createElement('div');
     skillRow.className = 'skill-row';
-    skillRow.innerHTML = `
-        <input type="text" placeholder="Skill name" class="skill-name">
-        <select class="skill-char">
-            <option value="WS">WS</option>
-            <option value="BS">BS</option>
-            <option value="S">S</option>
-            <option value="T">T</option>
-            <option value="I">I</option>
-            <option value="Ag">Ag</option>
-            <option value="Dex">Dex</option>
-            <option value="Int">Int</option>
-            <option value="WP">WP</option>
-            <option value="Fel">Fel</option>
-        </select>
-        <input type="number" placeholder="0" class="skill-adv" value="0">
-        <input type="number" readonly class="skill-total" value="0">
-        <button type="button" onclick="this.parentElement.remove(); showAdvancedSkillsSaveButton();">Remove</button>
-    `;
+    
+    const newSkill = { name: '', characteristic: 'WS', advances: 0 };
+    window.characterSheet.createAdvancedSkillRow(skillRow, newSkill, true);
     skillsList.appendChild(skillRow);
     
     // Add event listeners for calculation and save button visibility
     window.characterSheet.addAdvancedSkillEventListeners(skillRow);
+    
+    // Show save button
+    showAdvancedSkillsSaveButton();
 }
 
 function getCharacteristicValueByName(characteristic) {
@@ -636,4 +753,8 @@ function showTalentsSaveButton() {
     if (talentsSaveButton) {
         talentsSaveButton.classList.add('show');
     }
+}
+
+function toggleAdvancedSkillsEditMode() {
+    window.characterSheet.toggleAdvancedSkillsEditMode();
 }
