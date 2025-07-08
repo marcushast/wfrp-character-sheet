@@ -19,6 +19,12 @@ This is a web-based character sheet for Warhammer Fantasy Roleplay (WFRP) 4th Ed
 ├── script.js           # Core JavaScript functionality and character sheet logic
 ├── style.css           # Complete styling and responsive design
 ├── package.json        # Node.js dependencies (puppeteer for testing)
+├── test/               # Test files directory
+│   ├── comprehensive-test.js    # Complete end-to-end testing
+│   ├── quick-test.js           # Fast headless testing
+│   ├── simple-test.js          # Basic page validation
+│   ├── test-character-sheet.js # Full functional testing
+│   └── working-test.js         # Visual testing with browser
 └── CLAUDE.md          # This documentation file
 ```
 
@@ -195,19 +201,19 @@ npm install puppeteer
 **Execute Tests:**
 ```bash
 # Basic page validation
-node simple-test.js
+node test/simple-test.js
 
 # Quick headless test
-node quick-test.js
+node test/quick-test.js
 
 # Visual test (opens browser)
-node working-test.js
+node test/working-test.js
 
 # Full functional test
-node test-character-sheet.js
+node test/test-character-sheet.js
 
 # Comprehensive end-to-end test
-node comprehensive-test.js
+node test/comprehensive-test.js
 ```
 
 #### Test Categories
@@ -604,7 +610,7 @@ testBugFix().catch(console.error);
 
 **Directory Structure:**
 ```
-/tests/
+/test/
 ├── features/
 │   ├── feature-spell-slots-test.js
 │   ├── feature-dice-roller-test.js
@@ -624,11 +630,16 @@ testBugFix().catch(console.error);
 ```json
 {
   "scripts": {
-    "test": "node comprehensive-test.js",
-    "test:features": "node tests/features/*.js",
-    "test:bugs": "node tests/bugs/*.js",
-    "test:regression": "node tests/regression/*.js",
-    "test:new": "node tests/features/*.js && node tests/bugs/*.js"
+    "test": "node test/comprehensive-test.js",
+    "test:quick": "node test/quick-test.js",
+    "test:simple": "node test/simple-test.js",
+    "test:visual": "node test/working-test.js",
+    "test:full": "node test/test-character-sheet.js",
+    "test:all": "node test/simple-test.js && node test/quick-test.js && node test/comprehensive-test.js",
+    "test:features": "node test/features/*.js",
+    "test:bugs": "node test/bugs/*.js",
+    "test:regression": "node test/regression/*.js",
+    "test:new": "node test/features/*.js && node test/bugs/*.js"
   }
 }
 ```

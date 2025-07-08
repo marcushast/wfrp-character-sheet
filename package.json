@@ -4,7 +4,12 @@
   "description": "",
   "main": "script.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "node test/comprehensive-test.js",
+    "test:quick": "node test/quick-test.js",
+    "test:simple": "node test/simple-test.js",
+    "test:visual": "node test/working-test.js",
+    "test:full": "node test/test-character-sheet.js",
+    "test:all": "node test/simple-test.js && node test/quick-test.js && node test/comprehensive-test.js"
   },
   "keywords": [],
   "author": "",
