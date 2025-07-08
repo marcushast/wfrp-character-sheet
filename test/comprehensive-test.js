@@ -3,8 +3,8 @@ const path = require('path');
 
 async function comprehensiveTest() {
     const browser = await puppeteer.launch({ 
-        headless: false,
-        slowMo: 200
+        headless: true,
+        slowMo: 100
     });
     
     try {
@@ -20,7 +20,7 @@ async function comprehensiveTest() {
         console.log('✓ Page loaded successfully');
         
         // Wait for JavaScript to initialize
-        await new Promise(resolve => setTimeout(resolve, 2000));
+        await new Promise(resolve => setTimeout(resolve, 1000));
         
         // Test 1: Basic character information
         console.log('\n=== Testing Basic Character Info ===');
@@ -73,10 +73,14 @@ async function comprehensiveTest() {
         await page.evaluate(() => {
             document.querySelector('button[onclick="addAdvancedSkill()"]').scrollIntoView();
         });
-        await new Promise(resolve => setTimeout(resolve, 500));
+        await new Promise(resolve => setTimeout(resolve, 300));
+        
+        // Enable advanced skills edit mode first
+        await page.click('#edit-advanced-skills');
+        await new Promise(resolve => setTimeout(resolve, 300));
         
         await page.click('button[onclick="addAdvancedSkill()"]');
-        await new Promise(resolve => setTimeout(resolve, 500));
+        await new Promise(resolve => setTimeout(resolve, 300));
         
         // Check if a skill row was added
         const skillRows = await page.$$('#advanced-skills .skill-row');
@@ -87,10 +91,14 @@ async function comprehensiveTest() {
         await page.evaluate(() => {
             document.querySelector('button[onclick="addTalent()"]').scrollIntoView();
         });
-        await new Promise(resolve => setTimeout(resolve, 500));
+        await new Promise(resolve => setTimeout(resolve, 300));
+        
+        // Enable talents edit mode first
+        await page.click('#edit-talents');
+        await new Promise(resolve => setTimeout(resolve, 300));
         
         await page.click('button[onclick="addTalent()"]');
-        await new Promise(resolve => setTimeout(resolve, 500));
+        await new Promise(resolve => setTimeout(resolve, 300));
         
         const talentRows = await page.$$('#talents-list .talent-row');
         console.log(`✓ Talents: ${talentRows.length} row(s) added`);
@@ -100,10 +108,10 @@ async function comprehensiveTest() {
         await page.evaluate(() => {
             document.querySelector('button[onclick="addWeapon()"]').scrollIntoView();
         });
-        await new Promise(resolve => setTimeout(resolve, 500));
+        await new Promise(resolve => setTimeout(resolve, 300));
         
         await page.click('button[onclick="addWeapon()"]');
-        await new Promise(resolve => setTimeout(resolve, 500));
+        await new Promise(resolve => setTimeout(resolve, 300));
         
         const weaponRows = await page.$$('#weapons-list .weapon-row');
         console.log(`✓ Weapons: ${weaponRows.length} row(s) added`);
