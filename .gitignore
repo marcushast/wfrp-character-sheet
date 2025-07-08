@@ -1,0 +1,19 @@
+# Dependencies
+node_modules/
+
+# Test screenshots and generated images
+*.png
+*.jpg
+*.jpeg
+*.gif
+
+# macOS
+.DS_Store
+
+# Test output files
+test-*.png
+*-test.png
+*-result.png
+page-validation.png
+character-sheet-*.png
+comprehensive-test-result.png
