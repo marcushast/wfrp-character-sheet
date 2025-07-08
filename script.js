@@ -2,6 +2,7 @@ class WFRPCharacterSheet {
     constructor() {
         this.character = this.loadCharacter();
         this.advancedSkillsEditMode = false;
+        this.talentsEditMode = false;
         this.basicSkills = [
             { name: "Art", characteristic: "Dex" },
             { name: "Athletics", characteristic: "Ag" },
@@ -212,7 +213,7 @@ class WFRPCharacterSheet {
                 <div class="skill-total">
                     <input type="number" readonly value="0">
                 </div>
-                <button type="button" class="remove-button" onclick="this.parentElement.remove(); showAdvancedSkillsSaveButton();">Remove</button>
+                <button type="button" class="remove-button" onclick="this.parentElement.remove();">Remove</button>
             `;
         } else {
             skillRow.innerHTML = `
@@ -237,7 +238,7 @@ class WFRPCharacterSheet {
         if (editMode) {
             skillsSection.classList.remove('advanced-skills-readonly');
             skillsSection.classList.add('advanced-skills-edit');
-            editButton.textContent = 'Done';
+            editButton.textContent = 'Save';
         } else {
             skillsSection.classList.add('advanced-skills-readonly');
             skillsSection.classList.remove('advanced-skills-edit');
@@ -299,20 +300,94 @@ class WFRPCharacterSheet {
         
         if (this.character.talents && this.character.talents.length > 0) {
             this.character.talents.forEach(talent => {
-            const talentRow = document.createElement('div');
-            talentRow.className = 'talent-row';
+                const talentRow = document.createElement('div');
+                talentRow.className = 'talent-row';
+                this.createTalentRow(talentRow, talent, false); // false = read-only mode
+                container.appendChild(talentRow);
+                
+                // Add event listeners
+                this.addTalentEventListeners(talentRow);
+            });
+        }
+        
+        // Set initial mode to read-only
+        this.setTalentsMode(false);
+    }
+
+    createTalentRow(talentRow, talent, editMode) {
+        if (editMode) {
             talentRow.innerHTML = `
                 <input type="text" placeholder="Talent name" class="talent-name" value="${talent.name || ''}">
                 <input type="number" placeholder="0" class="talent-times" value="${talent.times || 0}">
                 <textarea placeholder="Description" class="talent-description">${talent.description || ''}</textarea>
-                <button type="button" onclick="this.parentElement.remove(); showTalentsSaveButton();">Remove</button>
+                <button type="button" class="remove-button" onclick="this.parentElement.remove();">Remove</button>
             `;
-            container.appendChild(talentRow);
-            
-            // Add event listeners
-            this.addTalentEventListeners(talentRow);
-            });
+        } else {
+            talentRow.innerHTML = `
+                <input type="text" readonly class="talent-name" value="${talent.name || ''}">
+                <input type="number" readonly class="talent-times" value="${talent.times || 0}">
+                <textarea readonly class="talent-description">${talent.description || ''}</textarea>
+                <span class="remove-button"></span>
+            `;
         }
+    }
+
+    setTalentsMode(editMode) {
+        this.talentsEditMode = editMode;
+        const talentsSection = document.getElementById('talents-list').closest('.talents');
+        const editButton = document.getElementById('edit-talents');
+        
+        if (editMode) {
+            talentsSection.classList.remove('talents-readonly');
+            talentsSection.classList.add('talents-edit');
+            editButton.textContent = 'Save';
+        } else {
+            talentsSection.classList.add('talents-readonly');
+            talentsSection.classList.remove('talents-edit');
+            editButton.textContent = 'Edit';
+        }
+        
+        // Re-populate talents with the new mode
+        this.repopulateTalents();
+    }
+
+    repopulateTalents() {
+        const container = document.getElementById('talents-list');
+        const talentRows = container.querySelectorAll('.talent-row');
+        
+        // Ensure the array exists
+        if (!this.character.talents) {
+            this.character.talents = [];
+        }
+        
+        talentRows.forEach((talentRow, index) => {
+            // Get current values before repopulating
+            const nameInput = talentRow.querySelector('.talent-name');
+            const timesInput = talentRow.querySelector('.talent-times');
+            const descriptionInput = talentRow.querySelector('.talent-description');
+            
+            let talent = this.character.talents[index] || { name: '', times: 0, description: '' };
+            
+            if (nameInput && timesInput && descriptionInput) {
+                talent.name = nameInput.value;
+                talent.times = parseInt(timesInput.value) || 0;
+                talent.description = descriptionInput.value;
+                
+                // Update the array
+                this.character.talents[index] = talent;
+            }
+            
+            this.createTalentRow(talentRow, talent, this.talentsEditMode);
+            this.addTalentEventListeners(talentRow);
+        });
+    }
+
+    toggleTalentsEditMode() {
+        if (this.talentsEditMode) {
+            // Save when exiting edit mode
+            this.saveTalents();
+        }
+        this.setTalentsMode(!this.talentsEditMode);
     }
 
     populateOtherSections() {
@@ -461,24 +536,12 @@ class WFRPCharacterSheet {
             totalInput.value = charValue + advances;
         };
         
-        const showAdvancedSkillsSaveButton = () => {
-            if (this.advancedSkillsEditMode) {
-                const saveButtons = document.querySelectorAll('.save-button');
-                const advancedSkillsSaveButton = Array.from(saveButtons).find(btn => btn.textContent.includes('Advanced Skills'));
-                if (advancedSkillsSaveButton) {
-                    advancedSkillsSaveButton.classList.add('show');
-                }
-            }
-        };
-        
         // Always add listener for advances input (editable in both modes)
         advancesInput.addEventListener('input', () => {
             calculateAdvancedSkillTotal();
             if (!this.advancedSkillsEditMode) {
                 // Auto-save advances in read-only mode
                 this.saveAdvancedSkills();
-            } else {
-                showAdvancedSkillsSaveButton();
             }
         });
         
@@ -487,14 +550,13 @@ class WFRPCharacterSheet {
         const skillNameInput = skillRow.querySelector('input.skill-name');
         
         if (characteristicSelect) {
-            characteristicSelect.addEventListener('change', () => {
-                calculateAdvancedSkillTotal();
-                showAdvancedSkillsSaveButton();
-            });
+            characteristicSelect.addEventListener('change', calculateAdvancedSkillTotal);
         }
         
         if (skillNameInput && !skillNameInput.readOnly) {
-            skillNameInput.addEventListener('input', showAdvancedSkillsSaveButton);
+            skillNameInput.addEventListener('input', () => {
+                // Changes will be saved when exiting edit mode
+            });
         }
         
         // Calculate initial value
@@ -529,21 +591,6 @@ class WFRPCharacterSheet {
         });
         
         this.saveCharacter();
-        
-        // Visual feedback and hide save button
-        const saveButtons = document.querySelectorAll('.save-button');
-        const advancedSkillsSaveButton = Array.from(saveButtons).find(btn => btn.textContent.includes('Advanced Skills'));
-        if (advancedSkillsSaveButton) {
-            const originalText = advancedSkillsSaveButton.textContent;
-            advancedSkillsSaveButton.textContent = 'Saved!';
-            advancedSkillsSaveButton.style.backgroundColor = '#32CD32';
-            setTimeout(() => {
-                advancedSkillsSaveButton.textContent = originalText;
-                advancedSkillsSaveButton.style.backgroundColor = '#228B22';
-                advancedSkillsSaveButton.classList.remove('show');
-            }, 1000);
-        }
-        
         console.log('Advanced skills saved:', this.character.advancedSkills);
     }
 
@@ -552,17 +599,24 @@ class WFRPCharacterSheet {
         const timesInput = talentRow.querySelector('.talent-times');
         const descriptionInput = talentRow.querySelector('.talent-description');
         
-        const showTalentsSaveButton = () => {
-            const saveButtons = document.querySelectorAll('.save-button');
-            const talentsSaveButton = Array.from(saveButtons).find(btn => btn.textContent.includes('Talents'));
-            if (talentsSaveButton) {
-                talentsSaveButton.classList.add('show');
-            }
-        };
+        // Only add listeners if fields are editable (not readonly)
+        if (nameInput && !nameInput.readOnly) {
+            nameInput.addEventListener('input', () => {
+                // Auto-save is handled by the edit mode toggle, no need for save button
+            });
+        }
         
-        nameInput.addEventListener('input', showTalentsSaveButton);
-        timesInput.addEventListener('input', showTalentsSaveButton);
-        descriptionInput.addEventListener('input', showTalentsSaveButton);
+        if (timesInput && !timesInput.readOnly) {
+            timesInput.addEventListener('input', () => {
+                // Auto-save is handled by the edit mode toggle, no need for save button
+            });
+        }
+        
+        if (descriptionInput && !descriptionInput.readOnly) {
+            descriptionInput.addEventListener('input', () => {
+                // Auto-save is handled by the edit mode toggle, no need for save button
+            });
+        }
     }
 
     saveTalents() {
@@ -583,21 +637,6 @@ class WFRPCharacterSheet {
         });
         
         this.saveCharacter();
-        
-        // Visual feedback and hide save button
-        const saveButtons = document.querySelectorAll('.save-button');
-        const talentSaveButton = Array.from(saveButtons).find(btn => btn.textContent.includes('Talents'));
-        if (talentSaveButton) {
-            const originalText = talentSaveButton.textContent;
-            talentSaveButton.textContent = 'Saved!';
-            talentSaveButton.style.backgroundColor = '#32CD32';
-            setTimeout(() => {
-                talentSaveButton.textContent = originalText;
-                talentSaveButton.style.backgroundColor = '#228B22';
-                talentSaveButton.classList.remove('show');
-            }, 1000);
-        }
-        
         console.log('Talents saved:', this.character.talents);
     }
 
@@ -636,18 +675,19 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 function addTalent() {
+    if (!window.characterSheet.talentsEditMode) {
+        return; // Only allow adding talents in edit mode
+    }
+    
     const talentsList = document.getElementById('talents-list');
     const talentRow = document.createElement('div');
     talentRow.className = 'talent-row';
-    talentRow.innerHTML = `
-        <input type="text" placeholder="Talent name" class="talent-name">
-        <input type="number" placeholder="0" class="talent-times">
-        <textarea placeholder="Description" class="talent-description"></textarea>
-        <button type="button" onclick="this.parentElement.remove(); showTalentsSaveButton();">Remove</button>
-    `;
+    
+    const newTalent = { name: '', times: 0, description: '' };
+    window.characterSheet.createTalentRow(talentRow, newTalent, true);
     talentsList.appendChild(talentRow);
     
-    // Add event listeners for showing save button
+    // Add event listeners
     window.characterSheet.addTalentEventListeners(talentRow);
 }
 
@@ -664,11 +704,8 @@ function addAdvancedSkill() {
     window.characterSheet.createAdvancedSkillRow(skillRow, newSkill, true);
     skillsList.appendChild(skillRow);
     
-    // Add event listeners for calculation and save button visibility
+    // Add event listeners for calculation
     window.characterSheet.addAdvancedSkillEventListeners(skillRow);
-    
-    // Show save button
-    showAdvancedSkillsSaveButton();
 }
 
 function getCharacteristicValueByName(characteristic) {
@@ -739,22 +776,10 @@ function addSpell() {
     spellsList.appendChild(spellRow);
 }
 
-function showAdvancedSkillsSaveButton() {
-    const saveButtons = document.querySelectorAll('.save-button');
-    const advancedSkillsSaveButton = Array.from(saveButtons).find(btn => btn.textContent.includes('Advanced Skills'));
-    if (advancedSkillsSaveButton) {
-        advancedSkillsSaveButton.classList.add('show');
-    }
-}
-
-function showTalentsSaveButton() {
-    const saveButtons = document.querySelectorAll('.save-button');
-    const talentsSaveButton = Array.from(saveButtons).find(btn => btn.textContent.includes('Talents'));
-    if (talentsSaveButton) {
-        talentsSaveButton.classList.add('show');
-    }
-}
-
 function toggleAdvancedSkillsEditMode() {
     window.characterSheet.toggleAdvancedSkillsEditMode();
+}
+
+function toggleTalentsEditMode() {
+    window.characterSheet.toggleTalentsEditMode();
 }

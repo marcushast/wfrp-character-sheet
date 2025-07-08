@@ -671,6 +671,35 @@ button:active {
     display: none;
 }
 
+.talents-readonly .add-buttons {
+    display: none;
+}
+
+.talents-readonly .talent-name {
+    background-color: #f9f9f9;
+    border: 1px solid #e0e0e0;
+    color: #666;
+    cursor: not-allowed;
+}
+
+.talents-readonly .talent-times {
+    background-color: #f9f9f9;
+    border: 1px solid #e0e0e0;
+    color: #666;
+    cursor: not-allowed;
+}
+
+.talents-readonly .talent-description {
+    background-color: #f9f9f9;
+    border: 1px solid #e0e0e0;
+    color: #666;
+    cursor: not-allowed;
+}
+
+.talents-readonly .remove-button {
+    display: none;
+}
+
 @media (max-width: 768px) {
     .combined-stats {
         flex-direction: column;

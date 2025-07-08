@@ -226,12 +226,14 @@
                 </div>
                 <div class="add-buttons">
                     <button type="button" onclick="addAdvancedSkill()">Add Advanced Skill</button>
-                    <button type="button" onclick="window.characterSheet.saveAdvancedSkills()" class="save-button">Save Advanced Skills</button>
                 </div>
             </div>
 
             <div class="talents">
-                <h3>Talents</h3>
+                <div class="section-header">
+                    <h3>Talents</h3>
+                    <button type="button" id="edit-talents" onclick="toggleTalentsEditMode()">Edit</button>
+                </div>
                 <div class="talents-grid">
                     <div class="talent-headers">
                         <div>Talent Name</div>
@@ -242,7 +244,6 @@
                 </div>
                 <div class="add-buttons">
                     <button type="button" onclick="addTalent()">Add Talent</button>
-                    <button type="button" onclick="window.characterSheet.saveTalents()" class="save-button">Save Talents</button>
                 </div>
             </div>
         </div>
