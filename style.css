@@ -700,6 +700,81 @@ button:active {
     display: none;
 }
 
+.weapons-readonly .add-buttons {
+    display: none;
+}
+
+.weapons-readonly .weapon-name,
+.weapons-readonly .weapon-group,
+.weapons-readonly .weapon-enc,
+.weapons-readonly .weapon-range,
+.weapons-readonly .weapon-damage,
+.weapons-readonly .weapon-qualities {
+    background-color: #f9f9f9;
+    border: 1px solid #e0e0e0;
+    color: #666;
+    cursor: not-allowed;
+}
+
+.weapons-readonly .remove-button {
+    display: none;
+}
+
+.armour-readonly .add-buttons {
+    display: none;
+}
+
+.armour-readonly .armour-name,
+.armour-readonly .armour-locations,
+.armour-readonly .armour-enc,
+.armour-readonly .armour-ap,
+.armour-readonly .armour-qualities {
+    background-color: #f9f9f9;
+    border: 1px solid #e0e0e0;
+    color: #666;
+    cursor: not-allowed;
+}
+
+.armour-readonly .remove-button {
+    display: none;
+}
+
+.trappings-readonly .add-buttons {
+    display: none;
+}
+
+.trappings-readonly .trapping-name,
+.trappings-readonly .trapping-enc {
+    background-color: #f9f9f9;
+    border: 1px solid #e0e0e0;
+    color: #666;
+    cursor: not-allowed;
+}
+
+.trappings-readonly .remove-button {
+    display: none;
+}
+
+.spells-readonly .add-buttons {
+    display: none;
+}
+
+.spells-readonly .spell-name,
+.spells-readonly .spell-cn,
+.spells-readonly .spell-range,
+.spells-readonly .spell-target,
+.spells-readonly .spell-duration,
+.spells-readonly .spell-effect {
+    background-color: #f9f9f9;
+    border: 1px solid #e0e0e0;
+    color: #666;
+    cursor: not-allowed;
+}
+
+.spells-readonly .remove-button {
+    display: none;
+}
+
 @media (max-width: 768px) {
     .combined-stats {
         flex-direction: column;

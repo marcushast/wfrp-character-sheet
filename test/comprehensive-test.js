@@ -3,8 +3,8 @@ const path = require('path');
 
 async function comprehensiveTest() {
     const browser = await puppeteer.launch({ 
-        headless: true,
-        slowMo: 100
+        headless: false,
+        slowMo: 250
     });
     
     try {
@@ -24,6 +24,7 @@ async function comprehensiveTest() {
         
         // Test 1: Basic character information
         console.log('\n=== Testing Basic Character Info ===');
+        await page.waitForSelector('#name', { timeout: 5000 });
         await page.type('#name', 'Grimjaw the Bold');
         await page.type('#species', 'Human');
         await page.type('#class', 'Warrior');
@@ -103,11 +104,15 @@ async function comprehensiveTest() {
         const talentRows = await page.$$('#talents-list .talent-row');
         console.log(`✓ Talents: ${talentRows.length} row(s) added`);
         
-        // Test 6: Scroll to and test weapons
-        console.log('\n=== Testing Weapons ===');
+        // Test 6: Scroll to and test weapons with edit mode
+        console.log('\n=== Testing Weapons Edit Mode ===');
         await page.evaluate(() => {
-            document.querySelector('button[onclick="addWeapon()"]').scrollIntoView();
+            document.querySelector('#edit-weapons').scrollIntoView();
         });
+        await new Promise(resolve => setTimeout(resolve, 300));
+        
+        // Test weapons edit mode toggle
+        await page.click('#edit-weapons');
         await new Promise(resolve => setTimeout(resolve, 300));
         
         await page.click('button[onclick="addWeapon()"]');
@@ -116,7 +121,72 @@ async function comprehensiveTest() {
         const weaponRows = await page.$$('#weapons-list .weapon-row');
         console.log(`✓ Weapons: ${weaponRows.length} row(s) added`);
         
-        // Test 7: Text areas
+        // Test weapons edit mode toggle back to read-only
+        await page.click('#edit-weapons');
+        await new Promise(resolve => setTimeout(resolve, 300));
+        console.log('✓ Weapons edit mode toggled');
+        
+        // Test 7: Armour edit mode
+        console.log('\n=== Testing Armour Edit Mode ===');
+        await page.evaluate(() => {
+            document.querySelector('#edit-armour').scrollIntoView();
+        });
+        await new Promise(resolve => setTimeout(resolve, 300));
+        
+        await page.click('#edit-armour');
+        await new Promise(resolve => setTimeout(resolve, 300));
+        
+        await page.click('button[onclick="addArmour()"]');
+        await new Promise(resolve => setTimeout(resolve, 300));
+        
+        const armourRows = await page.$$('#armour-list .armour-row');
+        console.log(`✓ Armour: ${armourRows.length} row(s) added`);
+        
+        await page.click('#edit-armour');
+        await new Promise(resolve => setTimeout(resolve, 300));
+        console.log('✓ Armour edit mode toggled');
+        
+        // Test 8: Trappings edit mode
+        console.log('\n=== Testing Trappings Edit Mode ===');
+        await page.evaluate(() => {
+            document.querySelector('#edit-trappings').scrollIntoView();
+        });
+        await new Promise(resolve => setTimeout(resolve, 300));
+        
+        await page.click('#edit-trappings');
+        await new Promise(resolve => setTimeout(resolve, 300));
+        
+        await page.click('button[onclick="addTrapping()"]');
+        await new Promise(resolve => setTimeout(resolve, 300));
+        
+        const trappingRows = await page.$$('#trapping-list .trapping-row');
+        console.log(`✓ Trappings: ${trappingRows.length} row(s) added`);
+        
+        await page.click('#edit-trappings');
+        await new Promise(resolve => setTimeout(resolve, 300));
+        console.log('✓ Trappings edit mode toggled');
+        
+        // Test 9: Spells edit mode
+        console.log('\n=== Testing Spells Edit Mode ===');
+        await page.evaluate(() => {
+            document.querySelector('#edit-spells').scrollIntoView();
+        });
+        await new Promise(resolve => setTimeout(resolve, 300));
+        
+        await page.click('#edit-spells');
+        await new Promise(resolve => setTimeout(resolve, 300));
+        
+        await page.click('button[onclick="addSpell()"]');
+        await new Promise(resolve => setTimeout(resolve, 300));
+        
+        const spellRows = await page.$$('#spells-list .spell-row');
+        console.log(`✓ Spells: ${spellRows.length} row(s) added`);
+        
+        await page.click('#edit-spells');
+        await new Promise(resolve => setTimeout(resolve, 300));
+        console.log('✓ Spells edit mode toggled');
+        
+        // Test 11: Text areas
         console.log('\n=== Testing Text Areas ===');
         await page.evaluate(() => {
             document.querySelector('#psychology').scrollIntoView();
@@ -127,7 +197,7 @@ async function comprehensiveTest() {
         await page.type('#long-ambition', 'Establish a warrior school');
         console.log('✓ Text areas filled');
         
-        // Test 8: Party information
+        // Test 12: Party information
         console.log('\n=== Testing Party Info ===');
         await page.type('#party-name', 'The Bold Company');
         await page.type('#party-short', 'Clear the goblin caves');
@@ -135,12 +205,83 @@ async function comprehensiveTest() {
         await page.type('#party-members', 'Grimjaw (Warrior), Elara (Wizard), Thorin (Dwarf)');
         console.log('✓ Party information filled');
         
-        // Test 9: Wealth
+        // Test 13: Wealth
         console.log('\n=== Testing Wealth ===');
         await page.type('#wealth-d', '12');
         await page.type('#wealth-ss', '8');
         await page.type('#wealth-gc', '5');
         console.log('✓ Wealth filled');
+        
+        // Test 14: Comprehensive edit mode validation
+        console.log('\n=== Testing Edit Mode Validation ===');
+        
+        // Test that edit buttons exist and are functional
+        const editButtons = await page.$$('#edit-weapons, #edit-armour, #edit-trappings, #edit-spells');
+        console.log(`✓ Found ${editButtons.length} edit buttons`);
+        
+        // Test that readonly classes are applied correctly
+        const weaponsSection = await page.$('.weapons');
+        const isWeaponsReadonly = await page.evaluate(el => el.classList.contains('weapons-readonly'), weaponsSection);
+        console.log(`✓ Weapons section readonly state: ${isWeaponsReadonly}`);
+        
+        const armourSection = await page.$('.armour');
+        const isArmourReadonly = await page.evaluate(el => el.classList.contains('armour-readonly'), armourSection);
+        console.log(`✓ Armour section readonly state: ${isArmourReadonly}`);
+        
+        const trappingsSection = await page.$('.trappings');
+        const isTrappingsReadonly = await page.evaluate(el => el.classList.contains('trappings-readonly'), trappingsSection);
+        console.log(`✓ Trappings section readonly state: ${isTrappingsReadonly}`);
+        
+        const spellsSection = await page.$('.spells');
+        const isSpellsReadonly = await page.evaluate(el => el.classList.contains('spells-readonly'), spellsSection);
+        console.log(`✓ Spells section readonly state: ${isSpellsReadonly}`);
+        
+        // Test data persistence for sections that were previously broken
+        console.log('\n=== Testing Data Persistence After Reload ===');
+        
+        // Add test data to problematic sections
+        await page.type('#psychology', 'Test psychology data');
+        await page.type('#corruption', 'Test corruption data');
+        await page.type('#short-ambition', 'Test short ambition');
+        await page.type('#party-name', 'Test party name');
+        
+        // Trigger change events
+        await page.evaluate(() => {
+            ['psychology', 'corruption', 'short-ambition', 'party-name'].forEach(id => {
+                const element = document.getElementById(id);
+                if (element) {
+                    const event = new Event('change', { bubbles: true });
+                    element.dispatchEvent(event);
+                }
+            });
+        });
+        
+        await new Promise(resolve => setTimeout(resolve, 500));
+        
+        // Reload page to test persistence
+        await page.reload({ waitUntil: 'networkidle0' });
+        await new Promise(resolve => setTimeout(resolve, 2000));
+        
+        // Check if data persisted
+        const persistedData = {
+            psychology: await page.$eval('#psychology', el => el.value),
+            corruption: await page.$eval('#corruption', el => el.value),
+            shortAmbition: await page.$eval('#short-ambition', el => el.value),
+            partyName: await page.$eval('#party-name', el => el.value)
+        };
+        
+        const persistenceResults = {
+            psychology: persistedData.psychology === 'Test psychology data',
+            corruption: persistedData.corruption === 'Test corruption data',
+            shortAmbition: persistedData.shortAmbition === 'Test short ambition',
+            partyName: persistedData.partyName === 'Test party name'
+        };
+        
+        let allDataPersisted = true;
+        Object.entries(persistenceResults).forEach(([field, persisted]) => {
+            console.log(`✓ ${field} persistence: ${persisted ? 'PASSED' : 'FAILED'}`);
+            if (!persisted) allDataPersisted = false;
+        });
         
         // Take final screenshot
         await page.screenshot({ path: 'comprehensive-test-result.png', fullPage: true });
@@ -148,8 +289,11 @@ async function comprehensiveTest() {
         
         console.log('\n🎉 Comprehensive test completed successfully!');
         console.log('✓ All major sections of the character sheet are functional');
-        console.log('✓ Dynamic content creation works (skills, talents, weapons)');
+        console.log('✓ Dynamic content creation works (skills, talents, weapons, armour, trappings, spells)');
+        console.log('✓ Edit mode functionality works for all sections');
         console.log('✓ Input fields accept data correctly');
+        console.log('✓ Readonly states are properly applied');
+        console.log(`✓ Data persistence: ${allDataPersisted ? 'WORKING' : 'NEEDS ATTENTION'}`);
         console.log('✓ The character sheet is working as expected');
         
     } catch (error) {

@@ -3,6 +3,10 @@ class WFRPCharacterSheet {
         this.character = this.loadCharacter();
         this.advancedSkillsEditMode = false;
         this.talentsEditMode = false;
+        this.weaponsEditMode = false;
+        this.armourEditMode = false;
+        this.trappingsEditMode = false;
+        this.spellsEditMode = false;
         this.basicSkills = [
             { name: "Art", characteristic: "Dex" },
             { name: "Athletics", characteristic: "Ag" },
@@ -37,8 +41,7 @@ class WFRPCharacterSheet {
     }
 
     loadCharacter() {
-        const saved = localStorage.getItem('wfrp-character');
-        return saved ? JSON.parse(saved) : {
+        const defaultCharacter = {
             name: '',
             species: '',
             class: '',
@@ -77,8 +80,49 @@ class WFRPCharacterSheet {
             ambitions: { short: '', long: '' },
             party: { name: '', short: '', long: '', members: '' },
             wounds: { sb: 0, tbPlus2: 0, wpb: 0, hardy: 0, wounds: 0 },
-            weapons: []
+            weapons: [],
+            armour: [],
+            trappings: [],
+            spells: [],
+            psychology: '',
+            corruption: '',
+            wealth: { d: 0, ss: 0, gc: 0 },
+            encumbrance: { weapons: 0, armour: 0, trappings: 0, max: 0, total: 0 }
         };
+
+        const saved = localStorage.getItem('wfrp-character');
+        if (!saved) {
+            return defaultCharacter;
+        }
+
+        try {
+            const savedCharacter = JSON.parse(saved);
+            
+            // Merge saved data with default structure to ensure all fields exist
+            return this.mergeCharacterData(defaultCharacter, savedCharacter);
+        } catch (error) {
+            console.warn('Failed to parse saved character data, using default:', error);
+            return defaultCharacter;
+        }
+    }
+
+    mergeCharacterData(defaultData, savedData) {
+        const merged = { ...defaultData };
+        
+        // Merge top-level properties
+        Object.keys(savedData).forEach(key => {
+            if (savedData[key] !== null && savedData[key] !== undefined) {
+                if (typeof savedData[key] === 'object' && !Array.isArray(savedData[key])) {
+                    // For objects, recursively merge
+                    merged[key] = { ...defaultData[key], ...savedData[key] };
+                } else {
+                    // For primitives and arrays, use saved value
+                    merged[key] = savedData[key];
+                }
+            }
+        });
+        
+        return merged;
     }
 
     saveCharacter() {
@@ -92,6 +136,10 @@ class WFRPCharacterSheet {
         this.populateBasicSkills();
         this.populateAdvancedSkills();
         this.populateTalents();
+        this.populateWeapons();
+        this.populateArmour();
+        this.populateTrappings();
+        this.populateSpells();
         this.populateOtherSections();
         // Small delay to ensure all elements are populated before calculating
         setTimeout(() => {
@@ -390,13 +438,597 @@ class WFRPCharacterSheet {
         this.setTalentsMode(!this.talentsEditMode);
     }
 
+    populateWeapons() {
+        const container = document.getElementById('weapons-list');
+        container.innerHTML = '';
+        
+        if (this.character.weapons && this.character.weapons.length > 0) {
+            this.character.weapons.forEach(weapon => {
+                const weaponRow = document.createElement('div');
+                weaponRow.className = 'weapon-row';
+                this.createWeaponRow(weaponRow, weapon, false); // false = read-only mode
+                container.appendChild(weaponRow);
+                
+                // Add event listeners
+                this.addWeaponEventListeners(weaponRow);
+            });
+        }
+        
+        // Set initial mode to read-only
+        this.setWeaponsMode(false);
+    }
+
+    createWeaponRow(weaponRow, weapon, editMode) {
+        if (editMode) {
+            weaponRow.innerHTML = `
+                <input type="text" placeholder="Weapon name" class="weapon-name" value="${weapon.name || ''}">
+                <input type="text" placeholder="Group" class="weapon-group" value="${weapon.group || ''}">
+                <input type="number" placeholder="0" class="weapon-enc" value="${weapon.enc || 0}">
+                <input type="text" placeholder="Range/Reach" class="weapon-range" value="${weapon.range || ''}">
+                <input type="text" placeholder="Damage" class="weapon-damage" value="${weapon.damage || ''}">
+                <input type="text" placeholder="Qualities" class="weapon-qualities" value="${weapon.qualities || ''}">
+                <button type="button" class="remove-button" onclick="this.parentElement.remove();">Remove</button>
+            `;
+        } else {
+            weaponRow.innerHTML = `
+                <input type="text" readonly class="weapon-name" value="${weapon.name || ''}">
+                <input type="text" readonly class="weapon-group" value="${weapon.group || ''}">
+                <input type="number" readonly class="weapon-enc" value="${weapon.enc || 0}">
+                <input type="text" readonly class="weapon-range" value="${weapon.range || ''}">
+                <input type="text" readonly class="weapon-damage" value="${weapon.damage || ''}">
+                <input type="text" readonly class="weapon-qualities" value="${weapon.qualities || ''}">
+                <span class="remove-button"></span>
+            `;
+        }
+    }
+
+    setWeaponsMode(editMode) {
+        this.weaponsEditMode = editMode;
+        const weaponsSection = document.getElementById('weapons-list').closest('.weapons');
+        const editButton = document.getElementById('edit-weapons');
+        
+        if (editMode) {
+            weaponsSection.classList.remove('weapons-readonly');
+            weaponsSection.classList.add('weapons-edit');
+            editButton.textContent = 'Save';
+        } else {
+            weaponsSection.classList.add('weapons-readonly');
+            weaponsSection.classList.remove('weapons-edit');
+            editButton.textContent = 'Edit';
+        }
+        
+        // Re-populate weapons with the new mode
+        this.repopulateWeapons();
+    }
+
+    repopulateWeapons() {
+        const container = document.getElementById('weapons-list');
+        const weaponRows = container.querySelectorAll('.weapon-row');
+        
+        // Ensure the array exists
+        if (!this.character.weapons) {
+            this.character.weapons = [];
+        }
+        
+        weaponRows.forEach((weaponRow, index) => {
+            // Get current values before repopulating
+            const nameInput = weaponRow.querySelector('.weapon-name');
+            const groupInput = weaponRow.querySelector('.weapon-group');
+            const encInput = weaponRow.querySelector('.weapon-enc');
+            const rangeInput = weaponRow.querySelector('.weapon-range');
+            const damageInput = weaponRow.querySelector('.weapon-damage');
+            const qualitiesInput = weaponRow.querySelector('.weapon-qualities');
+            
+            let weapon = this.character.weapons[index] || { name: '', group: '', enc: 0, range: '', damage: '', qualities: '' };
+            
+            if (nameInput && groupInput && encInput && rangeInput && damageInput && qualitiesInput) {
+                weapon.name = nameInput.value;
+                weapon.group = groupInput.value;
+                weapon.enc = parseInt(encInput.value) || 0;
+                weapon.range = rangeInput.value;
+                weapon.damage = damageInput.value;
+                weapon.qualities = qualitiesInput.value;
+                
+                // Update the array
+                this.character.weapons[index] = weapon;
+            }
+            
+            this.createWeaponRow(weaponRow, weapon, this.weaponsEditMode);
+            this.addWeaponEventListeners(weaponRow);
+        });
+    }
+
+    addWeaponEventListeners(weaponRow) {
+        const inputs = weaponRow.querySelectorAll('input');
+        
+        inputs.forEach(input => {
+            if (!input.readOnly) {
+                input.addEventListener('input', () => {
+                    // Auto-save is handled by the edit mode toggle
+                });
+            }
+        });
+    }
+
+    saveWeapons() {
+        const weaponRows = document.querySelectorAll('#weapons-list .weapon-row');
+        this.character.weapons = [];
+        
+        weaponRows.forEach(row => {
+            const name = row.querySelector('.weapon-name').value || '';
+            const group = row.querySelector('.weapon-group').value || '';
+            const enc = parseInt(row.querySelector('.weapon-enc').value) || 0;
+            const range = row.querySelector('.weapon-range').value || '';
+            const damage = row.querySelector('.weapon-damage').value || '';
+            const qualities = row.querySelector('.weapon-qualities').value || '';
+            
+            // Always save the weapon, even if empty, to maintain the row
+            this.character.weapons.push({
+                name: name,
+                group: group,
+                enc: enc,
+                range: range,
+                damage: damage,
+                qualities: qualities
+            });
+        });
+        
+        this.saveCharacter();
+        console.log('Weapons saved:', this.character.weapons);
+    }
+
+    toggleWeaponsEditMode() {
+        if (this.weaponsEditMode) {
+            // Save when exiting edit mode
+            this.saveWeapons();
+        }
+        this.setWeaponsMode(!this.weaponsEditMode);
+    }
+
+    populateArmour() {
+        const container = document.getElementById('armour-list');
+        container.innerHTML = '';
+        
+        if (this.character.armour && this.character.armour.length > 0) {
+            this.character.armour.forEach(armour => {
+                const armourRow = document.createElement('div');
+                armourRow.className = 'armour-row';
+                this.createArmourRow(armourRow, armour, false); // false = read-only mode
+                container.appendChild(armourRow);
+                
+                // Add event listeners
+                this.addArmourEventListeners(armourRow);
+            });
+        }
+        
+        // Set initial mode to read-only
+        this.setArmourMode(false);
+    }
+
+    createArmourRow(armourRow, armour, editMode) {
+        if (editMode) {
+            armourRow.innerHTML = `
+                <input type="text" placeholder="Armour name" class="armour-name" value="${armour.name || ''}">
+                <input type="text" placeholder="Locations" class="armour-locations" value="${armour.locations || ''}">
+                <input type="number" placeholder="0" class="armour-enc" value="${armour.enc || 0}">
+                <input type="number" placeholder="0" class="armour-ap" value="${armour.ap || 0}">
+                <input type="text" placeholder="Qualities" class="armour-qualities" value="${armour.qualities || ''}">
+                <button type="button" class="remove-button" onclick="this.parentElement.remove();">Remove</button>
+            `;
+        } else {
+            armourRow.innerHTML = `
+                <input type="text" readonly class="armour-name" value="${armour.name || ''}">
+                <input type="text" readonly class="armour-locations" value="${armour.locations || ''}">
+                <input type="number" readonly class="armour-enc" value="${armour.enc || 0}">
+                <input type="number" readonly class="armour-ap" value="${armour.ap || 0}">
+                <input type="text" readonly class="armour-qualities" value="${armour.qualities || ''}">
+                <span class="remove-button"></span>
+            `;
+        }
+    }
+
+    setArmourMode(editMode) {
+        this.armourEditMode = editMode;
+        const armourSection = document.getElementById('armour-list').closest('.armour');
+        const editButton = document.getElementById('edit-armour');
+        
+        if (editMode) {
+            armourSection.classList.remove('armour-readonly');
+            armourSection.classList.add('armour-edit');
+            editButton.textContent = 'Save';
+        } else {
+            armourSection.classList.add('armour-readonly');
+            armourSection.classList.remove('armour-edit');
+            editButton.textContent = 'Edit';
+        }
+        
+        // Re-populate armour with the new mode
+        this.repopulateArmour();
+    }
+
+    repopulateArmour() {
+        const container = document.getElementById('armour-list');
+        const armourRows = container.querySelectorAll('.armour-row');
+        
+        // Ensure the array exists
+        if (!this.character.armour) {
+            this.character.armour = [];
+        }
+        
+        armourRows.forEach((armourRow, index) => {
+            // Get current values before repopulating
+            const nameInput = armourRow.querySelector('.armour-name');
+            const locationsInput = armourRow.querySelector('.armour-locations');
+            const encInput = armourRow.querySelector('.armour-enc');
+            const apInput = armourRow.querySelector('.armour-ap');
+            const qualitiesInput = armourRow.querySelector('.armour-qualities');
+            
+            let armour = this.character.armour[index] || { name: '', locations: '', enc: 0, ap: 0, qualities: '' };
+            
+            if (nameInput && locationsInput && encInput && apInput && qualitiesInput) {
+                armour.name = nameInput.value;
+                armour.locations = locationsInput.value;
+                armour.enc = parseInt(encInput.value) || 0;
+                armour.ap = parseInt(apInput.value) || 0;
+                armour.qualities = qualitiesInput.value;
+                
+                // Update the array
+                this.character.armour[index] = armour;
+            }
+            
+            this.createArmourRow(armourRow, armour, this.armourEditMode);
+            this.addArmourEventListeners(armourRow);
+        });
+    }
+
+    addArmourEventListeners(armourRow) {
+        const inputs = armourRow.querySelectorAll('input');
+        
+        inputs.forEach(input => {
+            if (!input.readOnly) {
+                input.addEventListener('input', () => {
+                    // Auto-save is handled by the edit mode toggle
+                });
+            }
+        });
+    }
+
+    saveArmour() {
+        const armourRows = document.querySelectorAll('#armour-list .armour-row');
+        this.character.armour = [];
+        
+        armourRows.forEach(row => {
+            const name = row.querySelector('.armour-name').value || '';
+            const locations = row.querySelector('.armour-locations').value || '';
+            const enc = parseInt(row.querySelector('.armour-enc').value) || 0;
+            const ap = parseInt(row.querySelector('.armour-ap').value) || 0;
+            const qualities = row.querySelector('.armour-qualities').value || '';
+            
+            // Always save the armour, even if empty, to maintain the row
+            this.character.armour.push({
+                name: name,
+                locations: locations,
+                enc: enc,
+                ap: ap,
+                qualities: qualities
+            });
+        });
+        
+        this.saveCharacter();
+        console.log('Armour saved:', this.character.armour);
+    }
+
+    toggleArmourEditMode() {
+        if (this.armourEditMode) {
+            // Save when exiting edit mode
+            this.saveArmour();
+        }
+        this.setArmourMode(!this.armourEditMode);
+    }
+
+    populateTrappings() {
+        const container = document.getElementById('trapping-list');
+        container.innerHTML = '';
+        
+        if (this.character.trappings && this.character.trappings.length > 0) {
+            this.character.trappings.forEach(trapping => {
+                const trappingRow = document.createElement('div');
+                trappingRow.className = 'trapping-row';
+                this.createTrappingRow(trappingRow, trapping, false); // false = read-only mode
+                container.appendChild(trappingRow);
+                
+                // Add event listeners
+                this.addTrappingEventListeners(trappingRow);
+            });
+        }
+        
+        // Set initial mode to read-only
+        this.setTrappingsMode(false);
+    }
+
+    createTrappingRow(trappingRow, trapping, editMode) {
+        if (editMode) {
+            trappingRow.innerHTML = `
+                <input type="text" placeholder="Trapping name" class="trapping-name" value="${trapping.name || ''}">
+                <input type="number" placeholder="0" class="trapping-enc" value="${trapping.enc || 0}">
+                <button type="button" class="remove-button" onclick="this.parentElement.remove();">Remove</button>
+            `;
+        } else {
+            trappingRow.innerHTML = `
+                <input type="text" readonly class="trapping-name" value="${trapping.name || ''}">
+                <input type="number" readonly class="trapping-enc" value="${trapping.enc || 0}">
+                <span class="remove-button"></span>
+            `;
+        }
+    }
+
+    setTrappingsMode(editMode) {
+        this.trappingsEditMode = editMode;
+        const trappingsSection = document.getElementById('trapping-list').closest('.trappings');
+        const editButton = document.getElementById('edit-trappings');
+        
+        if (editMode) {
+            trappingsSection.classList.remove('trappings-readonly');
+            trappingsSection.classList.add('trappings-edit');
+            editButton.textContent = 'Save';
+        } else {
+            trappingsSection.classList.add('trappings-readonly');
+            trappingsSection.classList.remove('trappings-edit');
+            editButton.textContent = 'Edit';
+        }
+        
+        // Re-populate trappings with the new mode
+        this.repopulateTrappings();
+    }
+
+    repopulateTrappings() {
+        const container = document.getElementById('trapping-list');
+        const trappingRows = container.querySelectorAll('.trapping-row');
+        
+        // Ensure the array exists
+        if (!this.character.trappings) {
+            this.character.trappings = [];
+        }
+        
+        trappingRows.forEach((trappingRow, index) => {
+            // Get current values before repopulating
+            const nameInput = trappingRow.querySelector('.trapping-name');
+            const encInput = trappingRow.querySelector('.trapping-enc');
+            
+            let trapping = this.character.trappings[index] || { name: '', enc: 0 };
+            
+            if (nameInput && encInput) {
+                trapping.name = nameInput.value;
+                trapping.enc = parseInt(encInput.value) || 0;
+                
+                // Update the array
+                this.character.trappings[index] = trapping;
+            }
+            
+            this.createTrappingRow(trappingRow, trapping, this.trappingsEditMode);
+            this.addTrappingEventListeners(trappingRow);
+        });
+    }
+
+    addTrappingEventListeners(trappingRow) {
+        const inputs = trappingRow.querySelectorAll('input');
+        
+        inputs.forEach(input => {
+            if (!input.readOnly) {
+                input.addEventListener('input', () => {
+                    // Auto-save is handled by the edit mode toggle
+                });
+            }
+        });
+    }
+
+    saveTrappings() {
+        const trappingRows = document.querySelectorAll('#trapping-list .trapping-row');
+        this.character.trappings = [];
+        
+        trappingRows.forEach(row => {
+            const name = row.querySelector('.trapping-name').value || '';
+            const enc = parseInt(row.querySelector('.trapping-enc').value) || 0;
+            
+            // Always save the trapping, even if empty, to maintain the row
+            this.character.trappings.push({
+                name: name,
+                enc: enc
+            });
+        });
+        
+        this.saveCharacter();
+        console.log('Trappings saved:', this.character.trappings);
+    }
+
+    toggleTrappingsEditMode() {
+        if (this.trappingsEditMode) {
+            // Save when exiting edit mode
+            this.saveTrappings();
+        }
+        this.setTrappingsMode(!this.trappingsEditMode);
+    }
+
+    populateSpells() {
+        const container = document.getElementById('spells-list');
+        container.innerHTML = '';
+        
+        if (this.character.spells && this.character.spells.length > 0) {
+            this.character.spells.forEach(spell => {
+                const spellRow = document.createElement('div');
+                spellRow.className = 'spell-row';
+                this.createSpellRow(spellRow, spell, false); // false = read-only mode
+                container.appendChild(spellRow);
+                
+                // Add event listeners
+                this.addSpellEventListeners(spellRow);
+            });
+        }
+        
+        // Set initial mode to read-only
+        this.setSpellsMode(false);
+    }
+
+    createSpellRow(spellRow, spell, editMode) {
+        if (editMode) {
+            spellRow.innerHTML = `
+                <input type="text" placeholder="Spell/Prayer name" class="spell-name" value="${spell.name || ''}">
+                <input type="number" placeholder="0" class="spell-cn" value="${spell.cn || 0}">
+                <input type="text" placeholder="Range" class="spell-range" value="${spell.range || ''}">
+                <input type="text" placeholder="Target" class="spell-target" value="${spell.target || ''}">
+                <input type="text" placeholder="Duration" class="spell-duration" value="${spell.duration || ''}">
+                <textarea placeholder="Effect" class="spell-effect">${spell.effect || ''}</textarea>
+                <button type="button" class="remove-button" onclick="this.parentElement.remove();">Remove</button>
+            `;
+        } else {
+            spellRow.innerHTML = `
+                <input type="text" readonly class="spell-name" value="${spell.name || ''}">
+                <input type="number" readonly class="spell-cn" value="${spell.cn || 0}">
+                <input type="text" readonly class="spell-range" value="${spell.range || ''}">
+                <input type="text" readonly class="spell-target" value="${spell.target || ''}">
+                <input type="text" readonly class="spell-duration" value="${spell.duration || ''}">
+                <textarea readonly class="spell-effect">${spell.effect || ''}</textarea>
+                <span class="remove-button"></span>
+            `;
+        }
+    }
+
+    setSpellsMode(editMode) {
+        this.spellsEditMode = editMode;
+        const spellsSection = document.getElementById('spells-list').closest('.spells');
+        const editButton = document.getElementById('edit-spells');
+        
+        if (editMode) {
+            spellsSection.classList.remove('spells-readonly');
+            spellsSection.classList.add('spells-edit');
+            editButton.textContent = 'Save';
+        } else {
+            spellsSection.classList.add('spells-readonly');
+            spellsSection.classList.remove('spells-edit');
+            editButton.textContent = 'Edit';
+        }
+        
+        // Re-populate spells with the new mode
+        this.repopulateSpells();
+    }
+
+    repopulateSpells() {
+        const container = document.getElementById('spells-list');
+        const spellRows = container.querySelectorAll('.spell-row');
+        
+        // Ensure the array exists
+        if (!this.character.spells) {
+            this.character.spells = [];
+        }
+        
+        spellRows.forEach((spellRow, index) => {
+            // Get current values before repopulating
+            const nameInput = spellRow.querySelector('.spell-name');
+            const cnInput = spellRow.querySelector('.spell-cn');
+            const rangeInput = spellRow.querySelector('.spell-range');
+            const targetInput = spellRow.querySelector('.spell-target');
+            const durationInput = spellRow.querySelector('.spell-duration');
+            const effectInput = spellRow.querySelector('.spell-effect');
+            
+            let spell = this.character.spells[index] || { name: '', cn: 0, range: '', target: '', duration: '', effect: '' };
+            
+            if (nameInput && cnInput && rangeInput && targetInput && durationInput && effectInput) {
+                spell.name = nameInput.value;
+                spell.cn = parseInt(cnInput.value) || 0;
+                spell.range = rangeInput.value;
+                spell.target = targetInput.value;
+                spell.duration = durationInput.value;
+                spell.effect = effectInput.value;
+                
+                // Update the array
+                this.character.spells[index] = spell;
+            }
+            
+            this.createSpellRow(spellRow, spell, this.spellsEditMode);
+            this.addSpellEventListeners(spellRow);
+        });
+    }
+
+    addSpellEventListeners(spellRow) {
+        const inputs = spellRow.querySelectorAll('input, textarea');
+        
+        inputs.forEach(input => {
+            if (!input.readOnly) {
+                input.addEventListener('input', () => {
+                    // Auto-save is handled by the edit mode toggle
+                });
+            }
+        });
+    }
+
+    saveSpells() {
+        const spellRows = document.querySelectorAll('#spells-list .spell-row');
+        this.character.spells = [];
+        
+        spellRows.forEach(row => {
+            const name = row.querySelector('.spell-name').value || '';
+            const cn = parseInt(row.querySelector('.spell-cn').value) || 0;
+            const range = row.querySelector('.spell-range').value || '';
+            const target = row.querySelector('.spell-target').value || '';
+            const duration = row.querySelector('.spell-duration').value || '';
+            const effect = row.querySelector('.spell-effect').value || '';
+            
+            // Always save the spell, even if empty, to maintain the row
+            this.character.spells.push({
+                name: name,
+                cn: cn,
+                range: range,
+                target: target,
+                duration: duration,
+                effect: effect
+            });
+        });
+        
+        this.saveCharacter();
+        console.log('Spells saved:', this.character.spells);
+    }
+
+    toggleSpellsEditMode() {
+        if (this.spellsEditMode) {
+            // Save when exiting edit mode
+            this.saveSpells();
+        }
+        this.setSpellsMode(!this.spellsEditMode);
+    }
+
     populateOtherSections() {
+        // Ambitions
         document.getElementById('short-ambition').value = this.character.ambitions.short || '';
         document.getElementById('long-ambition').value = this.character.ambitions.long || '';
+        
+        // Party
         document.getElementById('party-name').value = this.character.party.name || '';
         document.getElementById('party-short').value = this.character.party.short || '';
         document.getElementById('party-long').value = this.character.party.long || '';
         document.getElementById('party-members').value = this.character.party.members || '';
+        
+        // Psychology and Corruption
+        document.getElementById('psychology').value = this.character.psychology || '';
+        document.getElementById('corruption').value = this.character.corruption || '';
+        
+        // Wounds
+        document.getElementById('sb').value = this.character.wounds.sb || 0;
+        document.getElementById('tb-plus-2').value = this.character.wounds.tbPlus2 || 0;
+        document.getElementById('wpb').value = this.character.wounds.wpb || 0;
+        document.getElementById('hardy').value = this.character.wounds.hardy || 0;
+        document.getElementById('wounds').value = this.character.wounds.wounds || 0;
+        
+        // Wealth
+        document.getElementById('wealth-d').value = this.character.wealth.d || 0;
+        document.getElementById('wealth-ss').value = this.character.wealth.ss || 0;
+        document.getElementById('wealth-gc').value = this.character.wealth.gc || 0;
+        
+        // Encumbrance
+        document.getElementById('enc-weapons').value = this.character.encumbrance.weapons || 0;
+        document.getElementById('enc-armour').value = this.character.encumbrance.armour || 0;
+        document.getElementById('enc-trappings').value = this.character.encumbrance.trappings || 0;
+        document.getElementById('enc-max').value = this.character.encumbrance.max || 0;
+        document.getElementById('enc-total').value = this.character.encumbrance.total || 0;
     }
 
     calculateDerivedStats() {
@@ -444,6 +1076,13 @@ class WFRPCharacterSheet {
                 totalInput.value = charValue + advances;
             }
         });
+        
+        // Update encumbrance total
+        const weaponsEnc = parseInt(document.getElementById('enc-weapons').value) || 0;
+        const armourEnc = parseInt(document.getElementById('enc-armour').value) || 0;
+        const trappingsEnc = parseInt(document.getElementById('enc-trappings').value) || 0;
+        const totalEnc = weaponsEnc + armourEnc + trappingsEnc;
+        document.getElementById('enc-total').value = totalEnc;
     }
 
     getCharacteristicValue(characteristic) {
@@ -478,7 +1117,20 @@ class WFRPCharacterSheet {
                 if (e.target.id.includes('-initial') || e.target.id.includes('-advances') || e.target.id.startsWith('skill-')) {
                     this.calculateDerivedStats();
                 }
+                // For text areas (ambitions, party, psychology, corruption), also save on input
+                if (e.target.tagName === 'TEXTAREA') {
+                    this.updateCharacterData(e.target);
+                    this.saveCharacter();
+                }
             });
+            
+            // Add blur event for additional safety on text areas
+            if (input.tagName === 'TEXTAREA') {
+                input.addEventListener('blur', (e) => {
+                    this.updateCharacterData(e.target);
+                    this.saveCharacter();
+                });
+            }
         });
     }
 
@@ -506,8 +1158,46 @@ class WFRPCharacterSheet {
             const type = id.includes('short') ? 'short' : 'long';
             this.character.ambitions[type] = value;
         } else if (id.includes('party')) {
-            const key = id.replace('party-', '').replace('-', '');
-            this.character.party[key] = value;
+            const key = id.replace('party-', '');
+            if (key === 'name') {
+                this.character.party.name = value;
+            } else if (key === 'short') {
+                this.character.party.short = value;
+            } else if (key === 'long') {
+                this.character.party.long = value;
+            } else if (key === 'members') {
+                this.character.party.members = value;
+            }
+        } else if (id === 'psychology') {
+            this.character.psychology = value;
+        } else if (id === 'corruption') {
+            this.character.corruption = value;
+        } else if (id === 'sb') {
+            this.character.wounds.sb = parseInt(value) || 0;
+        } else if (id === 'tb-plus-2') {
+            this.character.wounds.tbPlus2 = parseInt(value) || 0;
+        } else if (id === 'wpb') {
+            this.character.wounds.wpb = parseInt(value) || 0;
+        } else if (id === 'hardy') {
+            this.character.wounds.hardy = parseInt(value) || 0;
+        } else if (id === 'wounds') {
+            this.character.wounds.wounds = parseInt(value) || 0;
+        } else if (id === 'wealth-d') {
+            this.character.wealth.d = parseInt(value) || 0;
+        } else if (id === 'wealth-ss') {
+            this.character.wealth.ss = parseInt(value) || 0;
+        } else if (id === 'wealth-gc') {
+            this.character.wealth.gc = parseInt(value) || 0;
+        } else if (id === 'enc-weapons') {
+            this.character.encumbrance.weapons = parseInt(value) || 0;
+        } else if (id === 'enc-armour') {
+            this.character.encumbrance.armour = parseInt(value) || 0;
+        } else if (id === 'enc-trappings') {
+            this.character.encumbrance.trappings = parseInt(value) || 0;
+        } else if (id === 'enc-max') {
+            this.character.encumbrance.max = parseInt(value) || 0;
+        } else if (id === 'enc-total') {
+            this.character.encumbrance.total = parseInt(value) || 0;
         } else {
             const key = id.replace(/-/g, '');
             this.character[key] = value;
@@ -782,4 +1472,20 @@ function toggleAdvancedSkillsEditMode() {
 
 function toggleTalentsEditMode() {
     window.characterSheet.toggleTalentsEditMode();
+}
+
+function toggleWeaponsEditMode() {
+    window.characterSheet.toggleWeaponsEditMode();
+}
+
+function toggleArmourEditMode() {
+    window.characterSheet.toggleArmourEditMode();
+}
+
+function toggleTrappingsEditMode() {
+    window.characterSheet.toggleTrappingsEditMode();
+}
+
+function toggleSpellsEditMode() {
+    window.characterSheet.toggleSpellsEditMode();
 }
