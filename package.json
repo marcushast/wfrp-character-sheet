@@ -9,7 +9,10 @@
     "test:simple": "node test/simple-test.js",
     "test:visual": "node test/working-test.js",
     "test:full": "node test/test-character-sheet.js",
-    "test:all": "node test/simple-test.js && node test/quick-test.js && node test/comprehensive-test.js"
+    "test:import-export": "node test/feature-import-export-test.js",
+    "test:import-export-simple": "node test/simple-import-export-test.js",
+    "test:all": "node test/simple-test.js && node test/quick-test.js && node test/comprehensive-test.js",
+    "test:features": "node test/feature-import-export-test.js && node test/simple-import-export-test.js"
   },
   "keywords": [],
   "author": "",

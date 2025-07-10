@@ -1489,3 +1489,89 @@ function toggleTrappingsEditMode() {
 function toggleSpellsEditMode() {
     window.characterSheet.toggleSpellsEditMode();
 }
+
+// Import/Export Functions
+function exportCharacter() {
+    const exportModal = document.getElementById('export-modal');
+    const exportData = document.getElementById('export-data');
+    
+    // Get current character data
+    const characterData = window.characterSheet.character;
+    
+    // Convert to JSON with pretty formatting
+    const jsonData = JSON.stringify(characterData, null, 2);
+    
+    // Set the data in the textarea
+    exportData.value = jsonData;
+    
+    // Show the modal
+    exportModal.style.display = 'block';
+    
+    // Select all text for easy copying
+    exportData.select();
+    exportData.setSelectionRange(0, 99999); // For mobile devices
+}
+
+function closeExportModal() {
+    const exportModal = document.getElementById('export-modal');
+    exportModal.style.display = 'none';
+}
+
+function importCharacter() {
+    const importModal = document.getElementById('import-modal');
+    const importData = document.getElementById('import-data');
+    
+    // Clear the textarea
+    importData.value = '';
+    
+    // Show the modal
+    importModal.style.display = 'block';
+    
+    // Focus on the textarea
+    importData.focus();
+}
+
+function closeImportModal() {
+    const importModal = document.getElementById('import-modal');
+    importModal.style.display = 'none';
+}
+
+function confirmImport() {
+    const importData = document.getElementById('import-data');
+    const jsonData = importData.value.trim();
+    
+    if (!jsonData) {
+        alert('Please paste character data to import.');
+        return;
+    }
+    
+    try {
+        // Parse the JSON data
+        const characterData = JSON.parse(jsonData);
+        
+        // Validate that this looks like character data
+        if (typeof characterData !== 'object' || characterData === null) {
+            throw new Error('Invalid character data format');
+        }
+        
+        // Update the character sheet with imported data
+        window.characterSheet.character = window.characterSheet.mergeCharacterData(
+            window.characterSheet.character, 
+            characterData
+        );
+        
+        // Save to localStorage
+        window.characterSheet.saveCharacter();
+        
+        // Re-initialize the sheet with new data
+        window.characterSheet.initializeSheet();
+        
+        // Close the modal
+        closeImportModal();
+        
+        alert('Character data imported successfully!');
+        
+    } catch (error) {
+        alert('Error importing character data: ' + error.message + '\nPlease check that the data is valid JSON.');
+    }
+}

@@ -11,6 +11,10 @@
         <header class="sheet-header">
             <h1>Warhammer Fantasy Roleplay</h1>
             <h2>Character Sheet</h2>
+            <div class="import-export-buttons">
+                <button type="button" id="export-character" onclick="exportCharacter()">Export</button>
+                <button type="button" id="import-character" onclick="importCharacter()">Import</button>
+            </div>
         </header>
         
         <div class="character-info">
@@ -446,6 +450,31 @@
                         <textarea id="party-members" name="party-members"></textarea>
                     </div>
                 </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Export Modal -->
+    <div id="export-modal" class="modal">
+        <div class="modal-content">
+            <h3>Export Character Data</h3>
+            <p>Copy the character data below:</p>
+            <textarea id="export-data" readonly></textarea>
+            <div class="modal-buttons">
+                <button type="button" id="close-export" onclick="closeExportModal()">Close</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Import Modal -->
+    <div id="import-modal" class="modal">
+        <div class="modal-content">
+            <h3>Import Character Data</h3>
+            <p>Paste character data below:</p>
+            <textarea id="import-data" placeholder="Paste JSON character data here..."></textarea>
+            <div class="modal-buttons">
+                <button type="button" id="confirm-import" onclick="confirmImport()">Import</button>
+                <button type="button" id="cancel-import" onclick="closeImportModal()">Cancel</button>
             </div>
         </div>
     </div>

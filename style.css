@@ -830,3 +830,147 @@ button:active {
         flex-direction: column;
     }
 }
+
+/* Import/Export Buttons */
+.sheet-header {
+    position: relative;
+}
+
+.import-export-buttons {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    display: flex;
+    gap: 10px;
+}
+
+.import-export-buttons button {
+    padding: 8px 16px;
+    background-color: #8B4513;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 12px;
+    font-weight: bold;
+    transition: background-color 0.2s;
+}
+
+.import-export-buttons button:hover {
+    background-color: #a0501a;
+}
+
+.import-export-buttons button:active {
+    background-color: #7a3f10;
+}
+
+/* Modal Styles */
+.modal {
+    display: none;
+    position: fixed;
+    z-index: 1000;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    overflow: auto;
+    background-color: rgba(0, 0, 0, 0.5);
+}
+
+.modal-content {
+    background-color: #fefefe;
+    margin: 10% auto;
+    padding: 20px;
+    border: 1px solid #888;
+    border-radius: 8px;
+    width: 80%;
+    max-width: 600px;
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3);
+}
+
+.modal-content h3 {
+    color: #8B4513;
+    margin-bottom: 15px;
+    border-bottom: 2px solid #8B4513;
+    padding-bottom: 8px;
+}
+
+.modal-content p {
+    margin-bottom: 15px;
+    color: #666;
+}
+
+.modal-content textarea {
+    width: 100%;
+    height: 300px;
+    padding: 10px;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    font-family: 'Courier New', monospace;
+    font-size: 12px;
+    line-height: 1.4;
+    resize: vertical;
+    box-sizing: border-box;
+}
+
+.modal-content textarea:focus {
+    outline: none;
+    border-color: #8B4513;
+    box-shadow: 0 0 5px rgba(139, 69, 19, 0.3);
+}
+
+.modal-buttons {
+    display: flex;
+    gap: 10px;
+    justify-content: flex-end;
+    margin-top: 15px;
+}
+
+.modal-buttons button {
+    padding: 8px 16px;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 12px;
+    font-weight: bold;
+    transition: background-color 0.2s;
+}
+
+.modal-buttons #confirm-import {
+    background-color: #28a745;
+    color: white;
+}
+
+.modal-buttons #confirm-import:hover {
+    background-color: #218838;
+}
+
+.modal-buttons #close-export,
+.modal-buttons #cancel-import {
+    background-color: #6c757d;
+    color: white;
+}
+
+.modal-buttons #close-export:hover,
+.modal-buttons #cancel-import:hover {
+    background-color: #5a6268;
+}
+
+/* Mobile responsiveness for modals */
+@media (max-width: 768px) {
+    .modal-content {
+        width: 95%;
+        margin: 5% auto;
+        padding: 15px;
+    }
+    
+    .import-export-buttons {
+        position: static;
+        margin-top: 10px;
+        justify-content: center;
+    }
+    
+    .modal-content textarea {
+        height: 250px;
+    }
+}
