@@ -42,6 +42,16 @@ body {
 
 .character-info {
     margin-bottom: 20px;
+    border: 1px solid #ddd;
+    border-radius: 5px;
+    padding: 15px;
+}
+
+.character-info h3 {
+    margin-bottom: 10px;
+    color: #8B4513;
+    border-bottom: 1px solid #ddd;
+    padding-bottom: 5px;
 }
 
 .info-row {
