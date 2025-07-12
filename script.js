@@ -220,22 +220,12 @@ class WFRPCharacterSheet {
     }
 
     populateAdvancedSkills() {
-        const container = document.getElementById('advanced-skills');
-        container.innerHTML = '';
-        
-        if (this.character.advancedSkills && this.character.advancedSkills.length > 0) {
-            this.character.advancedSkills.forEach(skill => {
-                const skillRow = document.createElement('div');
-                skillRow.className = 'skill-row';
-                this.createAdvancedSkillRow(skillRow, skill, false); // false = read-only mode
-                container.appendChild(skillRow);
-                
-                // Add event listeners
-                this.addAdvancedSkillEventListeners(skillRow);
-            });
+        // Ensure the array exists
+        if (!this.character.advancedSkills) {
+            this.character.advancedSkills = [];
         }
         
-        // Set initial mode to read-only
+        // Set initial mode to read-only (this will trigger populateAdvancedSkillsInMode)
         this.setAdvancedSkillsMode(false);
     }
 
@@ -293,43 +283,60 @@ class WFRPCharacterSheet {
             editButton.textContent = 'Edit';
         }
         
-        // Re-populate skills with the new mode
-        this.repopulateAdvancedSkills();
+        // Re-populate skills with the new mode - single redraw
+        this.populateAdvancedSkillsInMode();
     }
 
-    repopulateAdvancedSkills() {
+    populateAdvancedSkillsInMode() {
         const container = document.getElementById('advanced-skills');
-        const skillRows = container.querySelectorAll('.skill-row');
         
         // Ensure the array exists
         if (!this.character.advancedSkills) {
             this.character.advancedSkills = [];
         }
         
-        skillRows.forEach((skillRow, index) => {
-            // Get current values before repopulating
-            const nameInput = skillRow.querySelector('.skill-name');
-            const charSelect = skillRow.querySelector('select.skill-char');
-            const charInput = skillRow.querySelector('input.skill-char');
-            const advInput = skillRow.querySelector('.skill-adv input');
+        // Collect current data from existing rows before clearing (only if rows exist)
+        const skillRows = container.querySelectorAll('.skill-row');
+        
+        if (skillRows.length > 0) {
+            // Only update character data if there are existing DOM elements
+            const currentSkills = [];
             
-            let skill = this.character.advancedSkills[index] || { name: '', characteristic: 'WS', advances: 0 };
-            
-            if (nameInput && advInput) {
-                skill.name = nameInput.value;
-                skill.advances = parseInt(advInput.value) || 0;
+            skillRows.forEach((skillRow, index) => {
+                const nameInput = skillRow.querySelector('.skill-name');
+                const charSelect = skillRow.querySelector('select.skill-char');
+                const charInput = skillRow.querySelector('input.skill-char');
+                const advInput = skillRow.querySelector('.skill-adv input');
                 
-                if (charSelect) {
-                    skill.characteristic = charSelect.value;
-                } else if (charInput) {
-                    skill.characteristic = charInput.value;
+                let skill = this.character.advancedSkills[index] || { name: '', characteristic: 'WS', advances: 0 };
+                
+                if (nameInput && advInput) {
+                    skill.name = nameInput.value;
+                    skill.advances = parseInt(advInput.value) || 0;
+                    
+                    if (charSelect) {
+                        skill.characteristic = charSelect.value;
+                    } else if (charInput) {
+                        skill.characteristic = charInput.value;
+                    }
                 }
                 
-                // Update the array
-                this.character.advancedSkills[index] = skill;
-            }
+                currentSkills.push(skill);
+            });
             
+            // Update character data with current values
+            this.character.advancedSkills = currentSkills;
+        }
+        
+        // Single clear and redraw
+        container.innerHTML = '';
+        
+        // Redraw all skills in the current mode
+        this.character.advancedSkills.forEach(skill => {
+            const skillRow = document.createElement('div');
+            skillRow.className = 'skill-row';
             this.createAdvancedSkillRow(skillRow, skill, this.advancedSkillsEditMode);
+            container.appendChild(skillRow);
             this.addAdvancedSkillEventListeners(skillRow);
         });
     }
