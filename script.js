@@ -220,52 +220,40 @@ class WFRPCharacterSheet {
     }
 
     populateAdvancedSkills() {
-        // Ensure the array exists
         if (!this.character.advancedSkills) {
             this.character.advancedSkills = [];
         }
-        
-        // Set initial mode to read-only (this will trigger populateAdvancedSkillsInMode)
         this.setAdvancedSkillsMode(false);
     }
 
     createAdvancedSkillRow(skillRow, skill, editMode) {
-        if (editMode) {
-            skillRow.innerHTML = `
-                <input type="text" placeholder="Skill name" class="skill-name" value="${skill.name || ''}">
-                <select class="skill-char">
-                    <option value="WS" ${skill.characteristic === 'WS' ? 'selected' : ''}>WS</option>
-                    <option value="BS" ${skill.characteristic === 'BS' ? 'selected' : ''}>BS</option>
-                    <option value="S" ${skill.characteristic === 'S' ? 'selected' : ''}>S</option>
-                    <option value="T" ${skill.characteristic === 'T' ? 'selected' : ''}>T</option>
-                    <option value="I" ${skill.characteristic === 'I' ? 'selected' : ''}>I</option>
-                    <option value="Ag" ${skill.characteristic === 'Ag' ? 'selected' : ''}>Ag</option>
-                    <option value="Dex" ${skill.characteristic === 'Dex' ? 'selected' : ''}>Dex</option>
-                    <option value="Int" ${skill.characteristic === 'Int' ? 'selected' : ''}>Int</option>
-                    <option value="WP" ${skill.characteristic === 'WP' ? 'selected' : ''}>WP</option>
-                    <option value="Fel" ${skill.characteristic === 'Fel' ? 'selected' : ''}>Fel</option>
-                </select>
-                <div class="skill-adv">
-                    <input type="number" placeholder="0" value="${skill.advances || 0}">
-                </div>
-                <div class="skill-total">
-                    <input type="number" readonly value="0">
-                </div>
-                <button type="button" class="remove-button" onclick="this.parentElement.remove();">Remove</button>
-            `;
-        } else {
-            skillRow.innerHTML = `
-                <input type="text" readonly class="skill-name" value="${skill.name || ''}">
-                <input type="text" readonly class="skill-char" value="${skill.characteristic || 'WS'}">
-                <div class="skill-adv">
-                    <input type="number" placeholder="0" value="${skill.advances || 0}">
-                </div>
-                <div class="skill-total">
-                    <input type="number" readonly value="0">
-                </div>
-                <span class="remove-button"></span>
-            `;
-        }
+        const characteristicOptions = ['WS', 'BS', 'S', 'T', 'I', 'Ag', 'Dex', 'Int', 'WP', 'Fel']
+            .map(char => `<option value="${char}" ${skill.characteristic === char ? 'selected' : ''}>${char}</option>`)
+            .join('');
+        
+        const nameField = editMode 
+            ? `<input type="text" placeholder="Skill name" class="skill-name" value="${skill.name || ''}">`
+            : `<div class="skill-name">${skill.name || ''}</div>`;
+            
+        const charField = editMode
+            ? `<select class="skill-char">${characteristicOptions}</select>`
+            : `<div class="skill-char">${skill.characteristic || 'WS'}</div>`;
+            
+        const removeButton = editMode
+            ? `<button type="button" class="remove-button" onclick="this.parentElement.remove();">Remove</button>`
+            : `<span class="remove-button"></span>`;
+            
+        skillRow.innerHTML = `
+            ${nameField}
+            ${charField}
+            <div class="skill-adv">
+                <input type="number" placeholder="0" value="${skill.advances || 0}">
+            </div>
+            <div class="skill-total">
+                <input type="number" readonly value="0">
+            </div>
+            ${removeButton}
+        `;
     }
 
     setAdvancedSkillsMode(editMode) {
@@ -290,48 +278,15 @@ class WFRPCharacterSheet {
     populateAdvancedSkillsInMode() {
         const container = document.getElementById('advanced-skills');
         
-        // Ensure the array exists
         if (!this.character.advancedSkills) {
             this.character.advancedSkills = [];
         }
         
-        // Collect current data from existing rows before clearing (only if rows exist)
-        const skillRows = container.querySelectorAll('.skill-row');
+        // Save current form data before re-rendering
+        this.saveAdvancedSkillsFromDOM();
         
-        if (skillRows.length > 0) {
-            // Only update character data if there are existing DOM elements
-            const currentSkills = [];
-            
-            skillRows.forEach((skillRow, index) => {
-                const nameInput = skillRow.querySelector('.skill-name');
-                const charSelect = skillRow.querySelector('select.skill-char');
-                const charInput = skillRow.querySelector('input.skill-char');
-                const advInput = skillRow.querySelector('.skill-adv input');
-                
-                let skill = this.character.advancedSkills[index] || { name: '', characteristic: 'WS', advances: 0 };
-                
-                if (nameInput && advInput) {
-                    skill.name = nameInput.value;
-                    skill.advances = parseInt(advInput.value) || 0;
-                    
-                    if (charSelect) {
-                        skill.characteristic = charSelect.value;
-                    } else if (charInput) {
-                        skill.characteristic = charInput.value;
-                    }
-                }
-                
-                currentSkills.push(skill);
-            });
-            
-            // Update character data with current values
-            this.character.advancedSkills = currentSkills;
-        }
-        
-        // Single clear and redraw
+        // Clear and re-render
         container.innerHTML = '';
-        
-        // Redraw all skills in the current mode
         this.character.advancedSkills.forEach(skill => {
             const skillRow = document.createElement('div');
             skillRow.className = 'skill-row';
@@ -1260,33 +1215,25 @@ class WFRPCharacterSheet {
         calculateAdvancedSkillTotal();
     }
 
-    saveAdvancedSkills() {
-        const advancedSkillRows = document.querySelectorAll('#advanced-skills .skill-row');
-        this.character.advancedSkills = [];
+    saveAdvancedSkillsFromDOM() {
+        const skillRows = document.querySelectorAll('#advanced-skills .skill-row');
+        if (skillRows.length === 0) return;
         
-        advancedSkillRows.forEach(row => {
-            const nameInput = row.querySelector('.skill-name');
-            const charSelect = row.querySelector('select.skill-char');
-            const charInput = row.querySelector('input.skill-char');
+        this.character.advancedSkills = Array.from(skillRows).map(row => {
+            const nameElement = row.querySelector('.skill-name');
+            const charElement = row.querySelector('.skill-char');
             const advInput = row.querySelector('.skill-adv input');
             
-            const name = nameInput ? nameInput.value || '' : '';
-            let characteristic = 'WS';
-            if (charSelect) {
-                characteristic = charSelect.value || 'WS';
-            } else if (charInput) {
-                characteristic = charInput.value || 'WS';
-            }
-            const advances = advInput ? parseInt(advInput.value) || 0 : 0;
-            
-            // Always save the skill, even if empty, to maintain the row
-            this.character.advancedSkills.push({
-                name: name,
-                characteristic: characteristic,
-                advances: advances
-            });
+            return {
+                name: nameElement ? (nameElement.value || nameElement.textContent || '') : '',
+                characteristic: charElement ? (charElement.value || charElement.textContent || 'WS') : 'WS',
+                advances: advInput ? parseInt(advInput.value) || 0 : 0
+            };
         });
-        
+    }
+    
+    saveAdvancedSkills() {
+        this.saveAdvancedSkillsFromDOM();
         this.saveCharacter();
         console.log('Advanced skills saved:', this.character.advancedSkills);
     }
