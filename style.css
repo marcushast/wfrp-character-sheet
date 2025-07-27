@@ -667,24 +667,6 @@ button:active {
     display: none;
 }
 
-.advanced-skills-readonly .skill-name {
-    background-color: #f9f9f9;
-    border: 1px solid #e0e0e0;
-    color: #666;
-    cursor: not-allowed;
-}
-
-.advanced-skills-readonly .skill-char {
-    background-color: #f9f9f9;
-    border: 1px solid #e0e0e0;
-    color: #666;
-    cursor: not-allowed;
-}
-
-.advanced-skills-readonly .remove-button {
-    display: none;
-}
-
 .talents-readonly .add-buttons {
     display: none;
 }

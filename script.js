@@ -226,34 +226,12 @@ class WFRPCharacterSheet {
         this.setAdvancedSkillsMode(false);
     }
 
-    createAdvancedSkillRow(skillRow, skill, editMode) {
-        const characteristicOptions = ['WS', 'BS', 'S', 'T', 'I', 'Ag', 'Dex', 'Int', 'WP', 'Fel']
-            .map(char => `<option value="${char}" ${skill.characteristic === char ? 'selected' : ''}>${char}</option>`)
-            .join('');
-        
-        const nameField = editMode 
-            ? `<input type="text" placeholder="Skill name" class="skill-name" value="${skill.name || ''}">`
-            : `<div class="skill-name">${skill.name || ''}</div>`;
-            
-        const charField = editMode
-            ? `<select class="skill-char">${characteristicOptions}</select>`
-            : `<div class="skill-char">${skill.characteristic || 'WS'}</div>`;
-            
-        const removeButton = editMode
-            ? `<button type="button" class="remove-button" onclick="this.parentElement.remove();">Remove</button>`
-            : `<span class="remove-button"></span>`;
-            
-        skillRow.innerHTML = `
-            ${nameField}
-            ${charField}
-            <div class="skill-adv">
-                <input type="number" placeholder="0" value="${skill.advances || 0}">
-            </div>
-            <div class="skill-total">
-                <input type="number" readonly value="0">
-            </div>
-            ${removeButton}
-        `;
+    toggleAdvancedSkillsEditMode() {
+        if (this.advancedSkillsEditMode) {
+            // Save when exiting edit mode
+            this.saveAdvancedSkills();
+        }
+        this.setAdvancedSkillsMode(!this.advancedSkillsEditMode);
     }
 
     setAdvancedSkillsMode(editMode) {
@@ -272,10 +250,10 @@ class WFRPCharacterSheet {
         }
         
         // Re-populate skills with the new mode - single redraw
-        this.populateAdvancedSkillsInMode();
+        this.populateAdvancedSkillsInMode(editMode);
     }
 
-    populateAdvancedSkillsInMode() {
+    populateAdvancedSkillsInMode(editMode) {
         const container = document.getElementById('advanced-skills');
         
         if (!this.character.advancedSkills) {
@@ -290,18 +268,51 @@ class WFRPCharacterSheet {
         this.character.advancedSkills.forEach(skill => {
             const skillRow = document.createElement('div');
             skillRow.className = 'skill-row';
-            this.createAdvancedSkillRow(skillRow, skill, this.advancedSkillsEditMode);
+            
+            if (editMode) {
+                this.createAdvancedSkillRowEditMode(skillRow, skill);
+            } else {
+                skillRow.innerHTML = `
+                    <div class="skill-name">${skill.name}</div>
+                    <div class="skill-char">${skill.characteristic}</div>
+                    <div class="skill-adv">
+                        <input type="number" placeholder="0" value="${skill.advances || 0}">
+                    </div>
+                    <div class="skill-total">
+                        <input type="number" readonly value="${this.character.skills[skill.name] || 0}">
+                    </div>
+                `;
+            }
+
             container.appendChild(skillRow);
             this.addAdvancedSkillEventListeners(skillRow);
         });
     }
 
-    toggleAdvancedSkillsEditMode() {
-        if (this.advancedSkillsEditMode) {
-            // Save when exiting edit mode
-            this.saveAdvancedSkills();
-        }
-        this.setAdvancedSkillsMode(!this.advancedSkillsEditMode);
+    createAdvancedSkillRowEditMode(skillRow, skill) {
+        const characteristicOptions = `
+            <option value="WS" ${skill.characteristic === 'WS' ? 'selected' : ''}>WS</option>
+            <option value="BS" ${skill.characteristic === 'BS' ? 'selected' : ''}>BS</option>
+            <option value="S" ${skill.characteristic === 'S' ? 'selected' : ''}>S</option>
+            <option value="T" ${skill.characteristic === 'T' ? 'selected' : ''}>T</option>
+            <option value="I" ${skill.characteristic === 'I' ? 'selected' : ''}>I</option>
+            <option value="Ag" ${skill.characteristic === 'Ag' ? 'selected' : ''}>Ag</option>
+            <option value="Dex" ${skill.characteristic === 'Dex' ? 'selected' : ''}>Dex</option>
+            <option value="Int" ${skill.characteristic === 'Int' ? 'selected' : ''}>Int</option>
+            <option value="WP" ${skill.characteristic === 'WP' ? 'selected' : ''}>WP</option>
+            <option value="Fel" ${skill.characteristic === 'Fel' ? 'selected' : ''}>Fel</option>
+        `;
+        skillRow.innerHTML = `
+            <input type="text" placeholder="Skill name" class="skill-name" value="${skill.name || ''}">
+            <select class="skill-char">${characteristicOptions}</select>
+            <div class="skill-adv">
+                <input type="number" placeholder="0" value="${skill.advances || 0}">
+            </div>
+            <div class="skill-total">
+                <input type="number" readonly value="0">
+            </div>
+            <button type="button" class="remove-button" onclick="this.parentElement.remove();">Remove</button>
+        `;
     }
 
     populateTalents() {
@@ -1345,7 +1356,7 @@ function addAdvancedSkill() {
     skillRow.className = 'skill-row';
     
     const newSkill = { name: '', characteristic: 'WS', advances: 0 };
-    window.characterSheet.createAdvancedSkillRow(skillRow, newSkill, true);
+    window.characterSheet.createAdvancedSkillRowEditMode(skillRow, newSkill);
     skillsList.appendChild(skillRow);
     
     // Add event listeners for calculation
