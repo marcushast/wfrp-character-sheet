@@ -337,20 +337,23 @@ class WFRPCharacterSheet {
 
     createTalentRow(talentRow, talent, editMode) {
         if (editMode) {
-            talentRow.innerHTML = `
-                <input type="text" placeholder="Talent name" class="talent-name" value="${talent.name || ''}">
-                <input type="number" placeholder="0" class="talent-times" value="${talent.times || 0}">
-                <textarea placeholder="Description" class="talent-description">${talent.description || ''}</textarea>
-                <button type="button" class="remove-button" onclick="this.parentElement.remove();">Remove</button>
-            `;
+            this.createTalentRowEditMode(talentRow, talent);
         } else {
             talentRow.innerHTML = `
-                <input type="text" readonly class="talent-name" value="${talent.name || ''}">
-                <input type="number" readonly class="talent-times" value="${talent.times || 0}">
-                <textarea readonly class="talent-description">${talent.description || ''}</textarea>
-                <span class="remove-button"></span>
+                <div class="talent-name">${talent.name}</div>
+                <div class="talent-times">${talent.times || 0}</div>
+                <div class="talent-description">${talent.description || ''}</div>
             `;
         }
+    }
+
+    createTalentRowEditMode(talentRow, talent) {
+        talentRow.innerHTML = `
+            <input type="text" placeholder="Talent name" class="talent-name" value="${talent.name || ''}">
+            <input type="number" placeholder="0" class="talent-times" value="${talent.times || 0}">
+            <textarea placeholder="Description" class="talent-description">${talent.description || ''}</textarea>
+            <button type="button" class="remove-button" onclick="this.parentElement.remove();">Remove</button>
+        `;
     }
 
     setTalentsMode(editMode) {
@@ -368,37 +371,35 @@ class WFRPCharacterSheet {
             editButton.textContent = 'Edit';
         }
         
-        // Re-populate talents with the new mode
-        this.repopulateTalents();
+        // Re-populate talents with the new mode - single redraw
+        this.populateTalentsInMode(editMode);
     }
 
-    repopulateTalents() {
+    populateTalentsInMode(editMode) {
         const container = document.getElementById('talents-list');
-        const talentRows = container.querySelectorAll('.talent-row');
         
-        // Ensure the array exists
         if (!this.character.talents) {
             this.character.talents = [];
         }
         
-        talentRows.forEach((talentRow, index) => {
-            // Get current values before repopulating
-            const nameInput = talentRow.querySelector('.talent-name');
-            const timesInput = talentRow.querySelector('.talent-times');
-            const descriptionInput = talentRow.querySelector('.talent-description');
+        // Clear and rebuild
+        container.innerHTML = '';
+        
+        this.character.talents.forEach(talent => {
+            const talentRow = document.createElement('div');
+            talentRow.className = 'talent-row';
             
-            let talent = this.character.talents[index] || { name: '', times: 0, description: '' };
-            
-            if (nameInput && timesInput && descriptionInput) {
-                talent.name = nameInput.value;
-                talent.times = parseInt(timesInput.value) || 0;
-                talent.description = descriptionInput.value;
-                
-                // Update the array
-                this.character.talents[index] = talent;
+            if (editMode) {
+                this.createTalentRowEditMode(talentRow, talent);
+            } else {
+                talentRow.innerHTML = `
+                    <div class="talent-name">${talent.name}</div>
+                    <input type="number" class="talent-times" readonly value="${talent.times || 0}">
+                    <div class="talent-description">${talent.description || ''}</div>
+                `;
             }
-            
-            this.createTalentRow(talentRow, talent, this.talentsEditMode);
+
+            container.appendChild(talentRow);
             this.addTalentEventListeners(talentRow);
         });
     }
@@ -1339,7 +1340,7 @@ function addTalent() {
     talentRow.className = 'talent-row';
     
     const newTalent = { name: '', times: 0, description: '' };
-    window.characterSheet.createTalentRow(talentRow, newTalent, true);
+    window.characterSheet.createTalentRowEditMode(talentRow, newTalent);
     talentsList.appendChild(talentRow);
     
     // Add event listeners

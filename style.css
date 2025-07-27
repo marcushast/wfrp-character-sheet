@@ -671,11 +671,13 @@ button:active {
     display: none;
 }
 
-.talents-readonly .talent-name {
-    background-color: #f9f9f9;
-    border: 1px solid #e0e0e0;
-    color: #666;
-    cursor: not-allowed;
+.talents-readonly .talent-name,
+.talents-readonly .talent-description {
+    border: none;
+    background: none;
+    padding: 4px 0;
+    font-size: 12px;
+    color: #333;
 }
 
 .talents-readonly .talent-times {
@@ -683,18 +685,9 @@ button:active {
     border: 1px solid #e0e0e0;
     color: #666;
     cursor: not-allowed;
+    text-align: center;
 }
 
-.talents-readonly .talent-description {
-    background-color: #f9f9f9;
-    border: 1px solid #e0e0e0;
-    color: #666;
-    cursor: not-allowed;
-}
-
-.talents-readonly .remove-button {
-    display: none;
-}
 
 .weapons-readonly .add-buttons {
     display: none;
