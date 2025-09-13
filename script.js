@@ -160,7 +160,10 @@ class CharacterState {
     // Load state from JSON
     fromJSON(jsonData) {
         this.batch(() => {
-            this.data = { ...jsonData };
+            // Clear existing data and merge in new data
+            Object.keys(this.data).forEach(key => delete this.data[key]);
+            Object.assign(this.data, jsonData);
+            
             // Recalculate all computed properties
             for (const key of this.computed.keys()) {
                 this.updateComputedProperty(key);
@@ -1821,7 +1824,8 @@ class WFRPCharacterSheet {
     saveAdvancedSkillsFromDOM() {
         const skillRows = document.querySelectorAll('#advanced-skills .skill-row');
         if (skillRows.length === 0) {
-            this.state.set('advancedSkills', []);
+            // Don't clear advanced skills if there are no DOM rows - 
+            // this happens during import when we're about to populate
             return;
         }
         
@@ -2138,10 +2142,20 @@ function confirmImport() {
         // Update the backward compatibility reference
         window.characterSheet.character = window.characterSheet.state.data;
         
+        // Re-populate dynamic sections that require DOM reconstruction
+        // These sections need to rebuild their DOM elements from the imported data
+        window.characterSheet.populateAdvancedSkills();
+        window.characterSheet.populateTalents();
+        window.characterSheet.populateWeapons();
+        window.characterSheet.populateArmour();
+        window.characterSheet.populateTrappings();
+        window.characterSheet.populateSpells();
+        
+        // Force sync to DOM to ensure all computed values are updated
+        window.characterSheet.domSync.syncToDOM();
+        
         // Close the modal
         closeImportModal();
-        
-        alert('Character data imported successfully!');
         
     } catch (error) {
         alert('Error importing character data: ' + error.message + '\nPlease check that the data is valid JSON.');
