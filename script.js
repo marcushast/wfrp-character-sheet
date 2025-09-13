@@ -1,6 +1,751 @@
+class CharacterState {
+    constructor(initialData = {}) {
+        this.data = initialData;
+        this.listeners = new Map();
+        this.computed = new Map();
+        this.computedDependencies = new Map();
+        this.isUpdating = false;
+        this.batchedUpdates = new Set();
+    }
+
+    // Get value at a dot-notation path
+    get(path) {
+        return this.getNestedValue(this.data, path);
+    }
+
+    // Set value at a dot-notation path
+    set(path, value) {
+        if (this.isUpdating) {
+            this.batchedUpdates.add(path);
+            return;
+        }
+
+        const oldValue = this.get(path);
+        if (oldValue === value) return;
+
+        this.setNestedValue(this.data, path, value);
+        this.notifyListeners(path, value, oldValue);
+        this.updateComputed(path);
+    }
+
+    // Subscribe to changes at a specific path
+    subscribe(path, callback) {
+        if (!this.listeners.has(path)) {
+            this.listeners.set(path, new Set());
+        }
+        this.listeners.get(path).add(callback);
+        
+        // Return unsubscribe function
+        return () => {
+            const callbacks = this.listeners.get(path);
+            if (callbacks) {
+                callbacks.delete(callback);
+                if (callbacks.size === 0) {
+                    this.listeners.delete(path);
+                }
+            }
+        };
+    }
+
+    // Register computed property
+    registerComputed(key, computeFn, dependencies = []) {
+        this.computed.set(key, computeFn);
+        this.computedDependencies.set(key, dependencies);
+        
+        // Subscribe to dependencies
+        dependencies.forEach(dep => {
+            this.subscribe(dep, () => this.updateComputedProperty(key));
+        });
+        
+        // Calculate initial value
+        this.updateComputedProperty(key);
+    }
+
+    // Get computed value
+    getComputed(key) {
+        if (this.computed.has(key)) {
+            return this.computed.get(key).call(this);
+        }
+        return undefined;
+    }
+
+    // Batch multiple updates
+    batch(updateFn) {
+        this.isUpdating = true;
+        this.batchedUpdates.clear();
+        
+        try {
+            updateFn();
+        } finally {
+            this.isUpdating = false;
+            
+            // Process batched updates
+            const updatedPaths = Array.from(this.batchedUpdates);
+            updatedPaths.forEach(path => {
+                this.notifyListeners(path, this.get(path));
+                this.updateComputed(path);
+            });
+        }
+    }
+
+    // Helper methods
+    getNestedValue(obj, path) {
+        return path.split('.').reduce((current, key) => {
+            return current && current[key] !== undefined ? current[key] : undefined;
+        }, obj);
+    }
+
+    setNestedValue(obj, path, value) {
+        const keys = path.split('.');
+        const lastKey = keys.pop();
+        const target = keys.reduce((current, key) => {
+            if (!current[key] || typeof current[key] !== 'object') {
+                current[key] = {};
+            }
+            return current[key];
+        }, obj);
+        target[lastKey] = value;
+    }
+
+    notifyListeners(path, newValue, oldValue) {
+        const callbacks = this.listeners.get(path);
+        if (callbacks) {
+            callbacks.forEach(callback => {
+                try {
+                    callback(newValue, oldValue, path);
+                } catch (error) {
+                    console.error('Error in state listener:', error);
+                }
+            });
+        }
+    }
+
+    updateComputed(changedPath) {
+        // Find computed properties that depend on this path
+        for (const [computedKey, dependencies] of this.computedDependencies.entries()) {
+            if (dependencies.some(dep => changedPath.startsWith(dep) || dep.startsWith(changedPath))) {
+                this.updateComputedProperty(computedKey);
+            }
+        }
+    }
+
+    updateComputedProperty(key) {
+        if (this.computed.has(key)) {
+            try {
+                const computeFn = this.computed.get(key);
+                const newValue = computeFn.call(this);
+                const oldValue = this.getNestedValue(this.data, `_computed.${key}`);
+                
+                if (oldValue !== newValue) {
+                    // Store computed value for quick access
+                    this.setNestedValue(this.data, `_computed.${key}`, newValue);
+                    this.notifyListeners(`_computed.${key}`, newValue, oldValue);
+                    // Also notify the broader _computed path
+                    this.notifyListeners('_computed', newValue, oldValue);
+                }
+            } catch (error) {
+                console.error(`Error computing ${key}:`, error);
+            }
+        }
+    }
+
+    // Export state as JSON
+    toJSON() {
+        // Remove computed values from export
+        const cleanData = JSON.parse(JSON.stringify(this.data));
+        delete cleanData._computed;
+        return cleanData;
+    }
+
+    // Load state from JSON
+    fromJSON(jsonData) {
+        this.batch(() => {
+            this.data = { ...jsonData };
+            // Recalculate all computed properties
+            for (const key of this.computed.keys()) {
+                this.updateComputedProperty(key);
+            }
+        });
+    }
+}
+
+class ComputedProperties {
+    static register(state) {
+        // Current characteristics (initial + advances)
+        const characteristics = ['ws', 'bs', 's', 't', 'i', 'ag', 'dex', 'int', 'wp', 'fel'];
+        characteristics.forEach(char => {
+            state.registerComputed(`current${char.toUpperCase()}`, function() {
+                const initial = this.get(`characteristics.${char}.initial`) || 0;
+                const advances = this.get(`characteristics.${char}.advances`) || 0;
+                return initial + advances;
+            }, [`characteristics.${char}.initial`, `characteristics.${char}.advances`]);
+        });
+
+        // Total experience
+        state.registerComputed('totalExperience', function() {
+            const current = this.get('experience.current') || 0;
+            const spent = this.get('experience.spent') || 0;
+            return current + spent;
+        }, ['experience.current', 'experience.spent']);
+
+        // Basic skills totals
+        const basicSkills = [
+            { name: "Art", characteristic: "dex", computedKey: "currentDEX" },
+            { name: "Athletics", characteristic: "ag", computedKey: "currentAG" },
+            { name: "Bribery", characteristic: "fel", computedKey: "currentFEL" },
+            { name: "Charm", characteristic: "fel", computedKey: "currentFEL" },
+            { name: "Charm Animal", characteristic: "wp", computedKey: "currentWP" },
+            { name: "Climb", characteristic: "s", computedKey: "currentS" },
+            { name: "Cool", characteristic: "wp", computedKey: "currentWP" },
+            { name: "Consume Alcohol", characteristic: "t", computedKey: "currentT" },
+            { name: "Dodge", characteristic: "ag", computedKey: "currentAG" },
+            { name: "Drive", characteristic: "ag", computedKey: "currentAG" },
+            { name: "Endurance", characteristic: "t", computedKey: "currentT" },
+            { name: "Entertain", characteristic: "fel", computedKey: "currentFEL" },
+            { name: "Gamble", characteristic: "int", computedKey: "currentINT" },
+            { name: "Gossip", characteristic: "fel", computedKey: "currentFEL" },
+            { name: "Haggle", characteristic: "fel", computedKey: "currentFEL" },
+            { name: "Intimidate", characteristic: "s", computedKey: "currentS" },
+            { name: "Intuition", characteristic: "i", computedKey: "currentI" },
+            { name: "Leadership", characteristic: "fel", computedKey: "currentFEL" },
+            { name: "Melee (Basic)", characteristic: "ws", computedKey: "currentWS" },
+            { name: "Melee", characteristic: "ws", computedKey: "currentWS" },
+            { name: "Navigation", characteristic: "i", computedKey: "currentI" },
+            { name: "Outdoor Survival", characteristic: "int", computedKey: "currentINT" },
+            { name: "Perception", characteristic: "i", computedKey: "currentI" },
+            { name: "Ride", characteristic: "ag", computedKey: "currentAG" },
+            { name: "Row", characteristic: "s", computedKey: "currentS" },
+            { name: "Stealth", characteristic: "ag", computedKey: "currentAG" }
+        ];
+
+        basicSkills.forEach(skill => {
+            const skillKey = skill.name.toLowerCase().replace(/\s+/g, '-').replace(/[()]/g, '');
+            state.registerComputed(`skillTotal.${skillKey}`, function() {
+                const charValue = this.get(`_computed.${skill.computedKey}`) || 0;
+                const advances = this.get(`skills.${skill.name}`) || 0;
+                return charValue + advances;
+            }, [`_computed.${skill.computedKey}`, `skills.${skill.name}`]);
+        });
+
+        // Advanced skills totals (dynamic based on array)
+        state.registerComputed('advancedSkillTotals', function() {
+            const advancedSkills = this.get('advancedSkills') || [];
+            return advancedSkills.map((skill, index) => {
+                // Map characteristic abbreviations to computed keys
+                const getCharacteristicComputedKey = (char) => {
+                    if (!char) return 'currentWS'; // Default fallback
+                    const upperChar = char.toUpperCase();
+                    // Handle special cases for characteristic mappings
+                    if (upperChar === 'I') return 'currentI';
+                    if (upperChar === 'AG') return 'currentAG';
+                    if (upperChar === 'DEX') return 'currentDEX';
+                    if (upperChar === 'INT') return 'currentINT';
+                    if (upperChar === 'WP') return 'currentWP';
+                    if (upperChar === 'FEL') return 'currentFEL';
+                    // Standard cases
+                    return `current${upperChar}`;
+                };
+                
+                const computedKey = getCharacteristicComputedKey(skill.characteristic);
+                const charValue = this.get(`_computed.${computedKey}`) || 0;
+                const advances = skill.advances || 0;
+                return {
+                    index,
+                    total: charValue + advances,
+                    name: skill.name,
+                    characteristic: skill.characteristic,
+                    advances
+                };
+            });
+        }, ['advancedSkills', '_computed.currentWS', '_computed.currentBS', '_computed.currentS', '_computed.currentT', '_computed.currentI', '_computed.currentAG', '_computed.currentDEX', '_computed.currentINT', '_computed.currentWP', '_computed.currentFEL']);
+
+        // Total encumbrance
+        state.registerComputed('totalEncumbrance', function() {
+            const weapons = this.get('encumbrance.weapons') || 0;
+            const armour = this.get('encumbrance.armour') || 0;
+            const trappings = this.get('encumbrance.trappings') || 0;
+            return weapons + armour + trappings;
+        }, ['encumbrance.weapons', 'encumbrance.armour', 'encumbrance.trappings']);
+
+        // Auto-calculated encumbrance from items (optional future enhancement)
+        state.registerComputed('calculatedWeaponsEncumbrance', function() {
+            const weapons = this.get('weapons') || [];
+            return weapons.reduce((total, weapon) => total + (weapon.enc || 0), 0);
+        }, ['weapons']);
+
+        state.registerComputed('calculatedArmourEncumbrance', function() {
+            const armour = this.get('armour') || [];
+            return armour.reduce((total, piece) => total + (piece.enc || 0), 0);
+        }, ['armour']);
+
+        state.registerComputed('calculatedTrappingsEncumbrance', function() {
+            const trappings = this.get('trappings') || [];
+            return trappings.reduce((total, trapping) => total + (trapping.enc || 0), 0);
+        }, ['trappings']);
+    }
+}
+
+class DOMSync {
+    constructor(state) {
+        this.state = state;
+        this.subscriptions = [];
+    }
+
+    // Sync state to DOM elements
+    syncToDOM() {
+        // Basic character info
+        const basicFields = ['name', 'species', 'class', 'career', 'career-level', 'career-path', 'status', 'age', 'height', 'hair', 'eyes'];
+        basicFields.forEach(field => {
+            const element = document.getElementById(field);
+            if (element) {
+                const stateKey = field.replace(/-/g, '');
+                const value = this.state.get(stateKey) || '';
+                if (element.value !== value) {
+                    element.value = value;
+                }
+            }
+        });
+
+        // Characteristics
+        const characteristics = ['ws', 'bs', 's', 't', 'i', 'ag', 'dex', 'int', 'wp', 'fel'];
+        characteristics.forEach(char => {
+            const initialElement = document.getElementById(`${char}-initial`);
+            const advancesElement = document.getElementById(`${char}-advances`);
+            const currentElement = document.getElementById(`${char}-current`);
+            
+            if (initialElement) {
+                const value = this.state.get(`characteristics.${char}.initial`) || 0;
+                if (initialElement.value !== String(value)) {
+                    initialElement.value = value;
+                }
+            }
+            
+            if (advancesElement) {
+                const value = this.state.get(`characteristics.${char}.advances`) || 0;
+                if (advancesElement.value !== String(value)) {
+                    advancesElement.value = value;
+                }
+            }
+            
+            if (currentElement) {
+                const value = this.state.get(`_computed.current${char.toUpperCase()}`) || 0;
+                if (currentElement.value !== String(value)) {
+                    currentElement.value = value;
+                }
+            }
+        });
+
+        // Secondary stats
+        const secondaryStats = [
+            { id: 'fate', path: 'fate' },
+            { id: 'fortune', path: 'fortune' },
+            { id: 'resilience', path: 'resilience' },
+            { id: 'resolve', path: 'resolve' },
+            { id: 'motivation', path: 'motivation' },
+            { id: 'current-exp', path: 'experience.current' },
+            { id: 'spent-exp', path: 'experience.spent' },
+            { id: 'total-exp', path: '_computed.totalExperience' },
+            { id: 'movement', path: 'movement' },
+            { id: 'walk', path: 'walk' },
+            { id: 'run', path: 'run' }
+        ];
+
+        secondaryStats.forEach(stat => {
+            const element = document.getElementById(stat.id);
+            if (element) {
+                const value = this.state.get(stat.path) || '';
+                if (element.value !== String(value)) {
+                    element.value = value;
+                }
+            }
+        });
+
+        // Basic skills
+        this.syncBasicSkills();
+
+        // Other sections
+        this.syncOtherSections();
+        
+        // Encumbrance
+        const encElement = document.getElementById('enc-total');
+        if (encElement) {
+            const value = this.state.get('_computed.totalEncumbrance') || 0;
+            if (encElement.value !== String(value)) {
+                encElement.value = value;
+            }
+        }
+    }
+
+    syncBasicSkills() {
+        const basicSkills = [
+            { name: "Art", characteristic: "dex" },
+            { name: "Athletics", characteristic: "ag" },
+            { name: "Bribery", characteristic: "fel" },
+            { name: "Charm", characteristic: "fel" },
+            { name: "Charm Animal", characteristic: "wp" },
+            { name: "Climb", characteristic: "s" },
+            { name: "Cool", characteristic: "wp" },
+            { name: "Consume Alcohol", characteristic: "t" },
+            { name: "Dodge", characteristic: "ag" },
+            { name: "Drive", characteristic: "ag" },
+            { name: "Endurance", characteristic: "t" },
+            { name: "Entertain", characteristic: "fel" },
+            { name: "Gamble", characteristic: "int" },
+            { name: "Gossip", characteristic: "fel" },
+            { name: "Haggle", characteristic: "fel" },
+            { name: "Intimidate", characteristic: "s" },
+            { name: "Intuition", characteristic: "i" },
+            { name: "Leadership", characteristic: "fel" },
+            { name: "Melee (Basic)", characteristic: "ws" },
+            { name: "Melee", characteristic: "ws" },
+            { name: "Navigation", characteristic: "i" },
+            { name: "Outdoor Survival", characteristic: "int" },
+            { name: "Perception", characteristic: "i" },
+            { name: "Ride", characteristic: "ag" },
+            { name: "Row", characteristic: "s" },
+            { name: "Stealth", characteristic: "ag" }
+        ];
+
+        basicSkills.forEach(skill => {
+            const skillKey = skill.name.toLowerCase().replace(/\s+/g, '-').replace(/[()]/g, '');
+            const advancesElement = document.getElementById(`skill-${skillKey}`);
+            const totalElement = document.getElementById(`skill-total-${skillKey}`);
+            
+            if (advancesElement) {
+                const value = this.state.get(`skills.${skill.name}`) || 0;
+                if (advancesElement.value !== String(value)) {
+                    advancesElement.value = value;
+                }
+            }
+            
+            if (totalElement) {
+                const value = this.state.get(`_computed.skillTotal.${skillKey}`) || 0;
+                if (totalElement.value !== String(value)) {
+                    totalElement.value = value;
+                }
+            }
+        });
+    }
+
+    syncOtherSections() {
+        // Ambitions
+        const shortAmbition = document.getElementById('short-ambition');
+        const longAmbition = document.getElementById('long-ambition');
+        if (shortAmbition) {
+            const value = this.state.get('ambitions.short') || '';
+            if (shortAmbition.value !== value) {
+                shortAmbition.value = value;
+            }
+        }
+        if (longAmbition) {
+            const value = this.state.get('ambitions.long') || '';
+            if (longAmbition.value !== value) {
+                longAmbition.value = value;
+            }
+        }
+
+        // Party
+        const partyFields = ['party-name', 'party-short', 'party-long', 'party-members'];
+        partyFields.forEach(field => {
+            const element = document.getElementById(field);
+            if (element) {
+                const key = field.replace('party-', '');
+                const value = this.state.get(`party.${key}`) || '';
+                if (element.value !== value) {
+                    element.value = value;
+                }
+            }
+        });
+
+        // Psychology and Corruption
+        const psychology = document.getElementById('psychology');
+        const corruption = document.getElementById('corruption');
+        if (psychology) {
+            const value = this.state.get('psychology') || '';
+            if (psychology.value !== value) {
+                psychology.value = value;
+            }
+        }
+        if (corruption) {
+            const value = this.state.get('corruption') || '';
+            if (corruption.value !== value) {
+                corruption.value = value;
+            }
+        }
+
+        // Wounds
+        const woundFields = ['sb', 'tb-plus-2', 'wpb', 'hardy', 'wounds'];
+        woundFields.forEach(field => {
+            const element = document.getElementById(field);
+            if (element) {
+                const key = field === 'tb-plus-2' ? 'tbPlus2' : field;
+                const value = this.state.get(`wounds.${key}`) || 0;
+                if (element.value !== String(value)) {
+                    element.value = value;
+                }
+            }
+        });
+
+        // Wealth
+        const wealthFields = ['wealth-d', 'wealth-ss', 'wealth-gc'];
+        wealthFields.forEach(field => {
+            const element = document.getElementById(field);
+            if (element) {
+                const key = field.replace('wealth-', '');
+                const value = this.state.get(`wealth.${key}`) || 0;
+                if (element.value !== String(value)) {
+                    element.value = value;
+                }
+            }
+        });
+
+        // Encumbrance
+        const encFields = ['enc-weapons', 'enc-armour', 'enc-trappings', 'enc-max'];
+        encFields.forEach(field => {
+            const element = document.getElementById(field);
+            if (element) {
+                const key = field.replace('enc-', '');
+                const value = this.state.get(`encumbrance.${key}`) || 0;
+                if (element.value !== String(value)) {
+                    element.value = value;
+                }
+            }
+        });
+    }
+
+    // Setup subscriptions to keep DOM in sync with state
+    setupSubscriptions() {
+        // Subscribe to computed values specifically
+        const computedSubscription = this.state.subscribe('_computed', () => {
+            this.syncComputedToDOM();
+        });
+        
+        this.subscriptions.push(computedSubscription);
+        
+        // Initial sync
+        this.syncToDOM();
+    }
+    
+    syncComputedToDOM() {
+        // Sync computed characteristics
+        const characteristics = ['ws', 'bs', 's', 't', 'i', 'ag', 'dex', 'int', 'wp', 'fel'];
+        characteristics.forEach(char => {
+            const currentElement = document.getElementById(`${char}-current`);
+            if (currentElement) {
+                const value = this.state.get(`_computed.current${char.toUpperCase()}`) || 0;
+                if (currentElement.value !== String(value)) {
+                    currentElement.value = value;
+                }
+            }
+        });
+        
+        // Sync computed totals
+        const totalExpElement = document.getElementById('total-exp');
+        if (totalExpElement) {
+            const value = this.state.get('_computed.totalExperience') || 0;
+            if (totalExpElement.value !== String(value)) {
+                totalExpElement.value = value;
+            }
+        }
+        
+        const totalEncElement = document.getElementById('enc-total');
+        if (totalEncElement) {
+            const value = this.state.get('_computed.totalEncumbrance') || 0;
+            if (totalEncElement.value !== String(value)) {
+                totalEncElement.value = value;
+            }
+        }
+        
+        // Sync basic skill totals
+        this.syncBasicSkillTotals();
+        
+        // Sync advanced skill totals
+        this.syncAdvancedSkillTotals();
+    }
+    
+    syncBasicSkillTotals() {
+        const basicSkills = [
+            { name: "Art", characteristic: "dex" },
+            { name: "Athletics", characteristic: "ag" },
+            { name: "Bribery", characteristic: "fel" },
+            { name: "Charm", characteristic: "fel" },
+            { name: "Charm Animal", characteristic: "wp" },
+            { name: "Climb", characteristic: "s" },
+            { name: "Cool", characteristic: "wp" },
+            { name: "Consume Alcohol", characteristic: "t" },
+            { name: "Dodge", characteristic: "ag" },
+            { name: "Drive", characteristic: "ag" },
+            { name: "Endurance", characteristic: "t" },
+            { name: "Entertain", characteristic: "fel" },
+            { name: "Gamble", characteristic: "int" },
+            { name: "Gossip", characteristic: "fel" },
+            { name: "Haggle", characteristic: "fel" },
+            { name: "Intimidate", characteristic: "s" },
+            { name: "Intuition", characteristic: "i" },
+            { name: "Leadership", characteristic: "fel" },
+            { name: "Melee (Basic)", characteristic: "ws" },
+            { name: "Melee", characteristic: "ws" },
+            { name: "Navigation", characteristic: "i" },
+            { name: "Outdoor Survival", characteristic: "int" },
+            { name: "Perception", characteristic: "i" },
+            { name: "Ride", characteristic: "ag" },
+            { name: "Row", characteristic: "s" },
+            { name: "Stealth", characteristic: "ag" }
+        ];
+
+        basicSkills.forEach(skill => {
+            const skillKey = skill.name.toLowerCase().replace(/\s+/g, '-').replace(/[()]/g, '');
+            const totalElement = document.getElementById(`skill-total-${skillKey}`);
+            
+            if (totalElement) {
+                const value = this.state.get(`_computed.skillTotal.${skillKey}`) || 0;
+                if (totalElement.value !== String(value)) {
+                    totalElement.value = value;
+                }
+            }
+        });
+    }
+    
+    syncAdvancedSkillTotals() {
+        const advancedSkillTotals = this.state.get('_computed.advancedSkillTotals') || [];
+        const advancedSkillRows = document.querySelectorAll('#advanced-skills .skill-row');
+        
+        advancedSkillRows.forEach((row, index) => {
+            const totalInput = row.querySelector('.skill-total input');
+            if (totalInput && advancedSkillTotals[index]) {
+                const computedTotal = advancedSkillTotals[index].total;
+                if (totalInput.value !== String(computedTotal)) {
+                    totalInput.value = computedTotal;
+                }
+            }
+        });
+    }
+
+    // Update state from DOM element
+    updateFromDOM(element) {
+        const id = element.id;
+        const value = element.type === 'number' ? (parseInt(element.value) || 0) : element.value;
+        
+        // Map DOM elements to state paths
+        const mappings = {
+            // Basic info
+            'name': 'name',
+            'species': 'species',
+            'class': 'class',
+            'career': 'career',
+            'career-level': 'careerLevel',
+            'career-path': 'careerPath',
+            'status': 'status',
+            'age': 'age',
+            'height': 'height',
+            'hair': 'hair',
+            'eyes': 'eyes',
+            
+            // Secondary stats
+            'fate': 'fate',
+            'fortune': 'fortune',
+            'resilience': 'resilience',
+            'resolve': 'resolve',
+            'motivation': 'motivation',
+            'current-exp': 'experience.current',
+            'spent-exp': 'experience.spent',
+            'movement': 'movement',
+            'walk': 'walk',
+            'run': 'run',
+            
+            // Ambitions
+            'short-ambition': 'ambitions.short',
+            'long-ambition': 'ambitions.long',
+            
+            // Party
+            'party-name': 'party.name',
+            'party-short': 'party.short',
+            'party-long': 'party.long',
+            'party-members': 'party.members',
+            
+            // Other
+            'psychology': 'psychology',
+            'corruption': 'corruption',
+            
+            // Wounds
+            'sb': 'wounds.sb',
+            'tb-plus-2': 'wounds.tbPlus2',
+            'wpb': 'wounds.wpb',
+            'hardy': 'wounds.hardy',
+            'wounds': 'wounds.wounds',
+            
+            // Wealth
+            'wealth-d': 'wealth.d',
+            'wealth-ss': 'wealth.ss',
+            'wealth-gc': 'wealth.gc',
+            
+            // Encumbrance
+            'enc-weapons': 'encumbrance.weapons',
+            'enc-armour': 'encumbrance.armour',
+            'enc-trappings': 'encumbrance.trappings',
+            'enc-max': 'encumbrance.max'
+        };
+
+        // Handle characteristics
+        if (id.includes('-initial') || id.includes('-advances')) {
+            const [char, type] = id.split('-');
+            this.state.set(`characteristics.${char}.${type}`, value);
+            return;
+        }
+
+        // Handle basic skills
+        if (id.startsWith('skill-') && !id.includes('total')) {
+            const skillName = id.replace('skill-', '').replace(/-/g, ' ');
+            // Find the actual skill name from the basic skills list
+            const basicSkills = [
+                "Art", "Athletics", "Bribery", "Charm", "Charm Animal", "Climb", "Cool",
+                "Consume Alcohol", "Dodge", "Drive", "Endurance", "Entertain", "Gamble",
+                "Gossip", "Haggle", "Intimidate", "Intuition", "Leadership", 
+                "Melee (Basic)", "Melee", "Navigation", "Outdoor Survival", 
+                "Perception", "Ride", "Row", "Stealth"
+            ];
+            const actualSkillName = basicSkills.find(skill => 
+                skill.toLowerCase().replace(/\s+/g, ' ') === skillName ||
+                skill.toLowerCase().replace(/\s+/g, '-').replace(/[()]/g, '') === skillName.replace(/\s+/g, '-')
+            );
+            if (actualSkillName) {
+                this.state.set(`skills.${actualSkillName}`, value);
+            }
+            return;
+        }
+
+        // Use mapping for other fields
+        const statePath = mappings[id];
+        if (statePath) {
+            this.state.set(statePath, value);
+        }
+    }
+
+    destroy() {
+        // Clean up subscriptions
+        this.subscriptions.forEach(unsubscribe => unsubscribe());
+        this.subscriptions = [];
+        
+        if (this.updateTimeout) {
+            clearTimeout(this.updateTimeout);
+        }
+    }
+}
+
 class WFRPCharacterSheet {
     constructor() {
-        this.character = this.loadCharacter();
+        // Initialize state management
+        const characterData = this.loadCharacter();
+        this.state = new CharacterState(characterData);
+        
+        // Register computed properties
+        ComputedProperties.register(this.state);
+        
+        // Initialize DOM sync
+        this.domSync = new DOMSync(this.state);
+        
+        // Keep backward compatibility
+        this.character = this.state.data;
         this.advancedSkillsEditMode = false;
         this.talentsEditMode = false;
         this.weaponsEditMode = false;
@@ -36,8 +781,23 @@ class WFRPCharacterSheet {
             { name: "Stealth", characteristic: "Ag" }
         ];
         
+        // Setup state persistence
+        this.setupStatePersistence();
+        
         this.initializeSheet();
         this.setupEventListeners();
+    }
+
+    setupStatePersistence() {
+        // Auto-save to localStorage when state changes
+        this.state.subscribe('', () => {
+            if (this.saveTimeout) {
+                clearTimeout(this.saveTimeout);
+            }
+            this.saveTimeout = setTimeout(() => {
+                localStorage.setItem('wfrp-character', JSON.stringify(this.state.toJSON()));
+            }, 500); // Debounce saves
+        });
     }
 
     loadCharacter() {
@@ -126,13 +886,16 @@ class WFRPCharacterSheet {
     }
 
     saveCharacter() {
-        localStorage.setItem('wfrp-character', JSON.stringify(this.character));
+        // This method is now handled automatically by state management
+        // Kept for backward compatibility
+        localStorage.setItem('wfrp-character', JSON.stringify(this.state.toJSON()));
     }
 
     initializeSheet() {
-        this.populateBasicInfo();
-        this.populateCharacteristics();
-        this.populateSecondaryStats();
+        // Setup DOM synchronization
+        this.domSync.setupSubscriptions();
+        
+        // Populate DOM elements first
         this.populateBasicSkills();
         this.populateAdvancedSkills();
         this.populateTalents();
@@ -140,59 +903,11 @@ class WFRPCharacterSheet {
         this.populateArmour();
         this.populateTrappings();
         this.populateSpells();
-        this.populateOtherSections();
-        // Small delay to ensure all elements are populated before calculating
-        setTimeout(() => {
-            this.calculateDerivedStats();
-        }, 100);
-    }
-
-    populateBasicInfo() {
-        const fields = ['name', 'species', 'class', 'career-path', 'career', 'career-level', 'status', 'age', 'height', 'hair', 'eyes'];
-        fields.forEach(field => {
-            const element = document.getElementById(field);
-            if (element) {
-                const key = field.replace(/-/g, '');
-                element.value = this.character[key] || '';
-            }
-        });
-    }
-
-    populateCharacteristics() {
-        const chars = ['ws', 'bs', 's', 't', 'i', 'ag', 'dex', 'int', 'wp', 'fel'];
         
-        chars.forEach(char => {
-            const initialInput = document.getElementById(`${char}-initial`);
-            const advancesInput = document.getElementById(`${char}-advances`);
-            const currentInput = document.getElementById(`${char}-current`);
-            
-            if (initialInput) {
-                initialInput.value = this.character.characteristics[char]?.initial || 0;
-            }
-            if (advancesInput) {
-                advancesInput.value = this.character.characteristics[char]?.advances || 0;
-            }
-            if (currentInput) {
-                currentInput.value = (this.character.characteristics[char]?.initial || 0) + 
-                                   (this.character.characteristics[char]?.advances || 0);
-            }
-        });
+        // Then sync state to DOM (after elements exist)
+        this.domSync.syncToDOM();
     }
 
-    populateSecondaryStats() {
-        const stats = ['fate', 'fortune', 'resilience', 'resolve', 'motivation', 'current-exp', 'spent-exp', 'movement', 'walk', 'run'];
-        stats.forEach(stat => {
-            const element = document.getElementById(stat);
-            if (element) {
-                const key = stat.replace('-', '');
-                if (stat.includes('exp')) {
-                    element.value = this.character.experience[key.replace('exp', '')] || 0;
-                } else {
-                    element.value = this.character[key] || '';
-                }
-            }
-        });
-    }
 
     populateBasicSkills() {
         const container = document.getElementById('basic-skills');
@@ -202,16 +917,17 @@ class WFRPCharacterSheet {
             const row = document.createElement('div');
             row.className = 'skill-row';
             
+            const skillKey = skill.name.toLowerCase().replace(/\s+/g, '-').replace(/[()]/g, '');
             row.innerHTML = `
                 <div class="skill-name">${skill.name}</div>
                 <div class="skill-char">${skill.characteristic}</div>
                 <div class="skill-adv">
-                    <input type="number" id="skill-${skill.name.toLowerCase().replace(/\s+/g, '-')}" 
-                           name="skill-${skill.name.toLowerCase().replace(/\s+/g, '-')}" 
+                    <input type="number" id="skill-${skillKey}" 
+                           name="skill-${skillKey}" 
                            value="${this.character.skills[skill.name] || 0}">
                 </div>
                 <div class="skill-total">
-                    <input type="number" readonly id="skill-total-${skill.name.toLowerCase().replace(/\s+/g, '-')}">
+                    <input type="number" readonly id="skill-total-${skillKey}">
                 </div>
             `;
             
@@ -251,6 +967,9 @@ class WFRPCharacterSheet {
         
         // Re-populate skills with the new mode - single redraw
         this.populateAdvancedSkillsInMode(editMode);
+        
+        // Sync computed totals to DOM after repopulating
+        this.domSync.syncAdvancedSkillTotals();
     }
 
     populateAdvancedSkillsInMode(editMode) {
@@ -276,10 +995,10 @@ class WFRPCharacterSheet {
                     <div class="skill-name">${skill.name}</div>
                     <div class="skill-char">${skill.characteristic}</div>
                     <div class="skill-adv">
-                        <input type="number" placeholder="0" value="${skill.advances || 0}">
+                        <input type="number" placeholder="0" value="${skill.advances || ''}">
                     </div>
                     <div class="skill-total">
-                        <input type="number" readonly value="${this.character.skills[skill.name] || 0}">
+                        <input type="number" readonly value="0">
                     </div>
                 `;
             }
@@ -306,7 +1025,7 @@ class WFRPCharacterSheet {
             <input type="text" placeholder="Skill name" class="skill-name" value="${skill.name || ''}">
             <select class="skill-char">${characteristicOptions}</select>
             <div class="skill-adv">
-                <input type="number" placeholder="0" value="${skill.advances || 0}">
+                <input type="number" placeholder="0" value="${skill.advances || ''}">
             </div>
             <div class="skill-total">
                 <input type="number" readonly value="0">
@@ -1006,232 +1725,107 @@ class WFRPCharacterSheet {
     }
 
     calculateDerivedStats() {
-        // Update total experience
-        document.getElementById('total-exp').value = 
-            (parseInt(document.getElementById('current-exp').value) || 0) + 
-            (parseInt(document.getElementById('spent-exp').value) || 0);
-        
-        // Update characteristics current values
-        const chars = ['ws', 'bs', 's', 't', 'i', 'ag', 'dex', 'int', 'wp', 'fel'];
-        chars.forEach(char => {
-            const initial = parseInt(document.getElementById(`${char}-initial`).value) || 0;
-            const advances = parseInt(document.getElementById(`${char}-advances`).value) || 0;
-            const currentInput = document.getElementById(`${char}-current`);
-            if (currentInput) {
-                currentInput.value = initial + advances;
-            }
-        });
-        
-        // Update skill totals
-        this.basicSkills.forEach(skill => {
-            const skillName = skill.name.toLowerCase().replace(/\s+/g, '-');
-            const advancesElement = document.getElementById(`skill-${skillName}`);
-            const totalElement = document.getElementById(`skill-total-${skillName}`);
-            
-            if (advancesElement && totalElement) {
-                const advances = parseInt(advancesElement.value) || 0;
-                const charValue = this.getCharacteristicValue(skill.characteristic);
-                const total = charValue + advances;
-                totalElement.value = total;
-            }
-        });
-        
-        // Update advanced skills totals
-        const advancedSkillRows = document.querySelectorAll('#advanced-skills .skill-row');
-        advancedSkillRows.forEach(row => {
-            const characteristicSelect = row.querySelector('.skill-char');
-            const advancesInput = row.querySelector('.skill-adv');
-            const totalInput = row.querySelector('.skill-total');
-            
-            if (characteristicSelect && advancesInput && totalInput) {
-                const characteristic = characteristicSelect.value;
-                const advances = parseInt(advancesInput.value) || 0;
-                const charValue = this.getCharacteristicValue(characteristic);
-                totalInput.value = charValue + advances;
-            }
-        });
-        
-        // Update encumbrance total
-        const weaponsEnc = parseInt(document.getElementById('enc-weapons').value) || 0;
-        const armourEnc = parseInt(document.getElementById('enc-armour').value) || 0;
-        const trappingsEnc = parseInt(document.getElementById('enc-trappings').value) || 0;
-        const totalEnc = weaponsEnc + armourEnc + trappingsEnc;
-        document.getElementById('enc-total').value = totalEnc;
+        // This method is now handled automatically by the state system
+        // The DOM will be updated automatically when computed values change
+        // This method is kept for backward compatibility but does nothing
+        console.log('calculateDerivedStats called - now handled by reactive state system');
     }
 
     getCharacteristicValue(characteristic) {
-        const char = characteristic.toLowerCase();
-        const currentInput = document.getElementById(`${char}-current`);
-        if (currentInput) {
-            return parseInt(currentInput.value) || 0;
-        }
-        // Fallback to calculating from initial + advances
-        const initialInput = document.getElementById(`${char}-initial`);
-        const advancesInput = document.getElementById(`${char}-advances`);
-        if (initialInput && advancesInput) {
-            return (parseInt(initialInput.value) || 0) + (parseInt(advancesInput.value) || 0);
-        }
-        // Final fallback to stored data
-        const charData = this.character.characteristics[char];
-        if (!charData) return 0;
-        return (charData.initial || 0) + (charData.advances || 0);
+        // Map characteristic abbreviations to computed keys (same logic as advanced skills)
+        const getCharacteristicComputedKey = (char) => {
+            if (!char) return 'currentWS'; // Default fallback
+            const upperChar = char.toUpperCase();
+            // Handle special cases for characteristic mappings
+            if (upperChar === 'I') return 'currentI';
+            if (upperChar === 'AG') return 'currentAG';
+            if (upperChar === 'DEX') return 'currentDEX';
+            if (upperChar === 'INT') return 'currentINT';
+            if (upperChar === 'WP') return 'currentWP';
+            if (upperChar === 'FEL') return 'currentFEL';
+            // Standard cases
+            return `current${upperChar}`;
+        };
+        
+        const computedKey = getCharacteristicComputedKey(characteristic);
+        return this.state.get(`_computed.${computedKey}`) || 0;
     }
 
     setupEventListeners() {
         const inputs = document.querySelectorAll('input, textarea');
         inputs.forEach(input => {
+            // Skip readonly inputs (computed values)
+            if (input.readOnly) return;
+            
             input.addEventListener('change', (e) => {
-                this.updateCharacterData(e.target);
-                this.calculateDerivedStats();
-                this.saveCharacter();
+                this.domSync.updateFromDOM(e.target);
             });
             
             // Also listen for input events for real-time updates
             input.addEventListener('input', (e) => {
+                // Update state immediately for characteristics and skills for responsive calculations
                 if (e.target.id.includes('-initial') || e.target.id.includes('-advances') || e.target.id.startsWith('skill-')) {
-                    this.calculateDerivedStats();
+                    this.domSync.updateFromDOM(e.target);
                 }
-                // For text areas (ambitions, party, psychology, corruption), also save on input
+                // For text areas, also update immediately
                 if (e.target.tagName === 'TEXTAREA') {
-                    this.updateCharacterData(e.target);
-                    this.saveCharacter();
+                    this.domSync.updateFromDOM(e.target);
                 }
             });
             
-            // Add blur event for additional safety on text areas
-            if (input.tagName === 'TEXTAREA') {
-                input.addEventListener('blur', (e) => {
-                    this.updateCharacterData(e.target);
-                    this.saveCharacter();
-                });
-            }
+            // Add blur event for additional safety
+            input.addEventListener('blur', (e) => {
+                this.domSync.updateFromDOM(e.target);
+            });
         });
     }
 
     updateCharacterData(element) {
-        const id = element.id;
-        const value = element.value;
-        
-        if (id.includes('current') && id.includes('exp')) {
-            this.character.experience.current = parseInt(value) || 0;
-        } else if (id.includes('spent') && id.includes('exp')) {
-            this.character.experience.spent = parseInt(value) || 0;
-        } else if (id.includes('-initial') || id.includes('-advances')) {
-            const [char, type] = id.split('-');
-            if (!this.character.characteristics[char]) {
-                this.character.characteristics[char] = { initial: 0, advances: 0 };
-            }
-            this.character.characteristics[char][type] = parseInt(value) || 0;
-        } else if (id.startsWith('skill-') && !id.includes('total')) {
-            const skillName = id.replace('skill-', '').replace(/-/g, ' ');
-            const skill = this.basicSkills.find(s => s.name.toLowerCase().replace(/\s+/g, ' ') === skillName);
-            if (skill) {
-                this.character.skills[skill.name] = parseInt(value) || 0;
-            }
-        } else if (id.includes('ambition')) {
-            const type = id.includes('short') ? 'short' : 'long';
-            this.character.ambitions[type] = value;
-        } else if (id.includes('party')) {
-            const key = id.replace('party-', '');
-            if (key === 'name') {
-                this.character.party.name = value;
-            } else if (key === 'short') {
-                this.character.party.short = value;
-            } else if (key === 'long') {
-                this.character.party.long = value;
-            } else if (key === 'members') {
-                this.character.party.members = value;
-            }
-        } else if (id === 'psychology') {
-            this.character.psychology = value;
-        } else if (id === 'corruption') {
-            this.character.corruption = value;
-        } else if (id === 'sb') {
-            this.character.wounds.sb = parseInt(value) || 0;
-        } else if (id === 'tb-plus-2') {
-            this.character.wounds.tbPlus2 = parseInt(value) || 0;
-        } else if (id === 'wpb') {
-            this.character.wounds.wpb = parseInt(value) || 0;
-        } else if (id === 'hardy') {
-            this.character.wounds.hardy = parseInt(value) || 0;
-        } else if (id === 'wounds') {
-            this.character.wounds.wounds = parseInt(value) || 0;
-        } else if (id === 'wealth-d') {
-            this.character.wealth.d = parseInt(value) || 0;
-        } else if (id === 'wealth-ss') {
-            this.character.wealth.ss = parseInt(value) || 0;
-        } else if (id === 'wealth-gc') {
-            this.character.wealth.gc = parseInt(value) || 0;
-        } else if (id === 'enc-weapons') {
-            this.character.encumbrance.weapons = parseInt(value) || 0;
-        } else if (id === 'enc-armour') {
-            this.character.encumbrance.armour = parseInt(value) || 0;
-        } else if (id === 'enc-trappings') {
-            this.character.encumbrance.trappings = parseInt(value) || 0;
-        } else if (id === 'enc-max') {
-            this.character.encumbrance.max = parseInt(value) || 0;
-        } else if (id === 'enc-total') {
-            this.character.encumbrance.total = parseInt(value) || 0;
-        } else {
-            const key = id.replace(/-/g, '');
-            this.character[key] = value;
-        }
+        // This method is now handled by domSync.updateFromDOM()
+        // Kept for backward compatibility
+        this.domSync.updateFromDOM(element);
     }
 
     addAdvancedSkillEventListeners(skillRow) {
         const advancesInput = skillRow.querySelector('.skill-adv input');
-        const totalInput = skillRow.querySelector('.skill-total input');
-        
-        const calculateAdvancedSkillTotal = () => {
-            let characteristic;
-            const characteristicSelect = skillRow.querySelector('select.skill-char');
-            const characteristicInput = skillRow.querySelector('input.skill-char');
-            
-            if (characteristicSelect) {
-                characteristic = characteristicSelect.value;
-            } else if (characteristicInput) {
-                characteristic = characteristicInput.value;
-            } else {
-                characteristic = 'WS';
-            }
-            
-            const advances = parseInt(advancesInput.value) || 0;
-            const charValue = getCharacteristicValueByName(characteristic);
-            totalInput.value = charValue + advances;
-        };
-        
-        // Always add listener for advances input (editable in both modes)
-        advancesInput.addEventListener('input', () => {
-            calculateAdvancedSkillTotal();
-            if (!this.advancedSkillsEditMode) {
-                // Auto-save advances in read-only mode
-                this.saveAdvancedSkills();
-            }
-        });
-        
-        // Add listeners for edit mode elements
         const characteristicSelect = skillRow.querySelector('select.skill-char');
         const skillNameInput = skillRow.querySelector('input.skill-name');
         
-        if (characteristicSelect) {
-            characteristicSelect.addEventListener('change', calculateAdvancedSkillTotal);
-        }
+        // Update state when any field changes
+        const updateAdvancedSkillsState = () => {
+            // Save all advanced skills to state
+            this.saveAdvancedSkillsFromDOM();
+        };
         
-        if (skillNameInput && !skillNameInput.readOnly) {
-            skillNameInput.addEventListener('input', () => {
-                // Changes will be saved when exiting edit mode
+        // Always add listener for advances input (editable in both modes)
+        if (advancesInput) {
+            advancesInput.addEventListener('input', () => {
+                updateAdvancedSkillsState();
+                if (!this.advancedSkillsEditMode) {
+                    // Auto-save advances in read-only mode
+                    this.saveAdvancedSkills();
+                }
             });
         }
         
-        // Calculate initial value
-        calculateAdvancedSkillTotal();
+        // Add listeners for edit mode elements
+        if (characteristicSelect) {
+            characteristicSelect.addEventListener('change', updateAdvancedSkillsState);
+        }
+        
+        if (skillNameInput && !skillNameInput.readOnly) {
+            skillNameInput.addEventListener('input', updateAdvancedSkillsState);
+        }
     }
 
     saveAdvancedSkillsFromDOM() {
         const skillRows = document.querySelectorAll('#advanced-skills .skill-row');
-        if (skillRows.length === 0) return;
+        if (skillRows.length === 0) {
+            this.state.set('advancedSkills', []);
+            return;
+        }
         
-        this.character.advancedSkills = Array.from(skillRows).map(row => {
+        const advancedSkills = Array.from(skillRows).map(row => {
             const nameElement = row.querySelector('.skill-name');
             const charElement = row.querySelector('.skill-char');
             const advInput = row.querySelector('.skill-adv input');
@@ -1242,6 +1836,12 @@ class WFRPCharacterSheet {
                 advances: advInput ? parseInt(advInput.value) || 0 : 0
             };
         });
+        
+        // Update state instead of directly modifying character object
+        this.state.set('advancedSkills', advancedSkills);
+        
+        // Keep backward compatibility
+        this.character.advancedSkills = advancedSkills;
     }
     
     saveAdvancedSkills() {
@@ -1365,6 +1965,12 @@ function addAdvancedSkill() {
 }
 
 function getCharacteristicValueByName(characteristic) {
+    // Use the character sheet's method which properly handles the state system
+    if (window.characterSheet) {
+        return window.characterSheet.getCharacteristicValue(characteristic);
+    }
+    
+    // Fallback to DOM reading (for backward compatibility)
     const char = characteristic.toLowerCase();
     const currentInput = document.getElementById(`${char}-current`);
     if (currentInput) {
@@ -1461,8 +2067,8 @@ function exportCharacter() {
     const exportModal = document.getElementById('export-modal');
     const exportData = document.getElementById('export-data');
     
-    // Get current character data
-    const characterData = window.characterSheet.character;
+    // Get current character data from state
+    const characterData = window.characterSheet.state.toJSON();
     
     // Convert to JSON with pretty formatting
     const jsonData = JSON.stringify(characterData, null, 2);
@@ -1520,17 +2126,17 @@ function confirmImport() {
             throw new Error('Invalid character data format');
         }
         
-        // Update the character sheet with imported data
-        window.characterSheet.character = window.characterSheet.mergeCharacterData(
-            window.characterSheet.character, 
+        // Update the state with imported data
+        const mergedData = window.characterSheet.mergeCharacterData(
+            window.characterSheet.state.data, 
             characterData
         );
         
-        // Save to localStorage
-        window.characterSheet.saveCharacter();
+        // Load the new data into state (this will trigger all updates automatically)
+        window.characterSheet.state.fromJSON(mergedData);
         
-        // Re-initialize the sheet with new data
-        window.characterSheet.initializeSheet();
+        // Update the backward compatibility reference
+        window.characterSheet.character = window.characterSheet.state.data;
         
         // Close the modal
         closeImportModal();
