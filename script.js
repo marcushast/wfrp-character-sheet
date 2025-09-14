@@ -1760,6 +1760,9 @@ class WFRPCharacterSheet {
             // Skip readonly inputs (computed values)
             if (input.readOnly) return;
             
+            // Skip export/import modal textareas
+            if (input.id === 'export-data' || input.id === 'import-data') return;
+            
             input.addEventListener('change', (e) => {
                 this.domSync.updateFromDOM(e.target);
             });
@@ -2073,6 +2076,10 @@ function exportCharacter() {
     
     // Get current character data from state
     const characterData = window.characterSheet.state.toJSON();
+    
+    // Remove exportdata and importdata fields before converting to JSON
+    delete characterData.exportdata;
+    delete characterData.importdata;
     
     // Convert to JSON with pretty formatting
     const jsonData = JSON.stringify(characterData, null, 2);
