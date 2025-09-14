@@ -336,6 +336,32 @@ class DOMSync {
                     currentElement.value = value;
                 }
             }
+            
+            // Also sync mobile characteristics
+            const mobileInitialElement = document.getElementById(`${char}-initial-mobile`);
+            const mobileAdvancesElement = document.getElementById(`${char}-advances-mobile`);
+            const mobileCurrentElement = document.getElementById(`${char}-current-mobile`);
+            
+            if (mobileInitialElement) {
+                const value = this.state.get(`characteristics.${char}.initial`) || 0;
+                if (mobileInitialElement.value !== String(value)) {
+                    mobileInitialElement.value = value;
+                }
+            }
+            
+            if (mobileAdvancesElement) {
+                const value = this.state.get(`characteristics.${char}.advances`) || 0;
+                if (mobileAdvancesElement.value !== String(value)) {
+                    mobileAdvancesElement.value = value;
+                }
+            }
+            
+            if (mobileCurrentElement) {
+                const value = this.state.get(`_computed.current${char.toUpperCase()}`) || 0;
+                if (mobileCurrentElement.value !== String(value)) {
+                    mobileCurrentElement.value = value;
+                }
+            }
         });
 
         // Secondary stats
@@ -689,10 +715,25 @@ class DOMSync {
             'enc-max': 'encumbrance.max'
         };
 
-        // Handle characteristics
+        // Handle characteristics (both desktop and mobile)
         if (id.includes('-initial') || id.includes('-advances')) {
-            const [char, type] = id.split('-');
+            let char, type;
+            if (id.includes('-mobile')) {
+                // Mobile input: ws-initial-mobile -> ws, initial
+                const parts = id.replace('-mobile', '').split('-');
+                char = parts[0];
+                type = parts[1];
+            } else {
+                // Desktop input: ws-initial -> ws, initial
+                const parts = id.split('-');
+                char = parts[0];
+                type = parts[1];
+            }
+            
             this.state.set(`characteristics.${char}.${type}`, value);
+            
+            // Sync between desktop and mobile inputs
+            this.syncCharacteristicInputs(char, type, value);
             return;
         }
 
@@ -721,6 +762,39 @@ class DOMSync {
         const statePath = mappings[id];
         if (statePath) {
             this.state.set(statePath, value);
+        }
+    }
+    
+    // Sync between desktop and mobile characteristic inputs
+    syncCharacteristicInputs(char, type, value) {
+        // Update desktop input if mobile was changed
+        const desktopInputId = `${char}-${type}`;
+        const desktopInput = document.getElementById(desktopInputId);
+        if (desktopInput && desktopInput.value !== String(value)) {
+            desktopInput.value = value;
+        }
+        
+        // Update mobile input if desktop was changed
+        const mobileInputId = `${char}-${type}-mobile`;
+        const mobileInput = document.getElementById(mobileInputId);
+        if (mobileInput && mobileInput.value !== String(value)) {
+            mobileInput.value = value;
+        }
+        
+        // Also update the computed current value for both desktop and mobile
+        const desktopCurrentId = `${char}-current`;
+        const mobileCurrentId = `${char}-current-mobile`;
+        const computedKey = `current${char.toUpperCase()}`;
+        const currentValue = this.state.get(`_computed.${computedKey}`) || 0;
+        
+        const desktopCurrentInput = document.getElementById(desktopCurrentId);
+        if (desktopCurrentInput && desktopCurrentInput.value !== String(currentValue)) {
+            desktopCurrentInput.value = currentValue;
+        }
+        
+        const mobileCurrentInput = document.getElementById(mobileCurrentId);
+        if (mobileCurrentInput && mobileCurrentInput.value !== String(currentValue)) {
+            mobileCurrentInput.value = currentValue;
         }
     }
 

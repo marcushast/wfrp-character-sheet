@@ -764,45 +764,332 @@ button:active {
     display: none;
 }
 
+/* Mobile Characteristics Table Styling */
+.characteristics-mobile {
+    display: none; /* Hidden by default, shown on mobile */
+}
+
+.char-mobile-headers {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr 1fr;
+    gap: 8px;
+    padding: 8px 0;
+    background-color: #f0f0f0;
+    border-radius: 4px;
+    font-weight: bold;
+    text-align: center;
+    margin-bottom: 4px;
+}
+
+.char-mobile-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr 1fr;
+    gap: 8px;
+    padding: 8px 0;
+    border-bottom: 1px solid #eee;
+    align-items: center;
+}
+
+.char-mobile-label {
+    font-weight: bold;
+    text-align: center;
+    padding: 8px;
+    background-color: #f9f9f9;
+    border-radius: 3px;
+    color: #8B4513;
+}
+
+.char-mobile-row input {
+    padding: 8px;
+    border: 1px solid #ccc;
+    border-radius: 3px;
+    font-size: 14px;
+    text-align: center;
+    width: 100%;
+    box-sizing: border-box;
+}
+
 @media (max-width: 768px) {
     .combined-stats {
         flex-direction: column;
+        gap: 4px;
+    }
+    
+    /* Compact mobile layouts for stats sections */
+    .fate-section .stat-group,
+    .resilience-section .stat-group,
+    .movement-section .stat-group,
+    .experience-section .stat-group {
+        display: grid;
+        gap: 2px 6px;
+        margin-bottom: 0;
+    }
+    
+    /* Fate: 2 columns (Fate, Fortune) */
+    .fate-section .stat-group {
+        grid-template-columns: 1fr 1fr;
+    }
+    
+    /* Resilience: 2 columns for first row, full width for Motivation */
+    .resilience-section .stat-group {
+        grid-template-columns: 1fr 1fr;
+    }
+    
+    .resilience-section .stat-item:nth-child(3) {
+        grid-column: 1 / -1; /* Motivation spans full width */
+    }
+    
+    /* Movement: 3 columns (Movement, Walk, Run) */
+    .movement-section .stat-group {
+        grid-template-columns: 1fr 1fr 1fr;
+    }
+    
+    /* Experience: 3 columns (Current | Spent | Total) */
+    .experience-section .stat-group {
+        grid-template-columns: 1fr 1fr 1fr;
+    }
+    
+    /* Compact stat items */
+    .combined-stats .stat-item {
+        flex-direction: column;
+        gap: 1px;
+        align-items: stretch;
+    }
+    
+    .combined-stats .stat-item label {
+        font-size: 10px;
+        margin-bottom: 1px;
+        font-weight: 600;
+        line-height: 1;
+    }
+    
+    .combined-stats .stat-item input {
+        height: 20px;
+        font-size: 11px;
+        padding: 1px 2px;
+    }
+    
+    /* Reduce section padding and headers */
+    .fate-section, .resilience-section, .movement-section, .experience-section {
+        padding: 4px;
+        margin-bottom: 0;
+    }
+    
+    .combined-stats h3 {
+        margin-bottom: 2px;
+        font-size: 12px;
+        padding-bottom: 1px;
+        margin-top: 0;
+        line-height: 1.1;
     }
     
     .info-row {
         flex-direction: column;
     }
     
-    .char-headers {
-        grid-template-columns: repeat(5, 1fr);
+    /* Hide desktop characteristics table on mobile */
+    .char-table {
+        display: none;
     }
     
-    .char-row {
-        grid-template-columns: 80px repeat(5, 1fr);
+    /* Show mobile characteristics table */
+    .characteristics-mobile {
+        display: block;
     }
     
     .skill-headers, .skill-row {
-        grid-template-columns: 1fr;
+        grid-template-columns: 2fr 60px 50px 60px;
+        gap: 3px;
+        font-size: 12px;
+        padding: 1px 0;
+        min-height: 24px;
+    }
+    
+    .skill-headers {
+        padding: 4px 0;
+        font-size: 11px;
+        font-weight: bold;
+    }
+    
+    .skill-row input {
+        padding: 4px 2px;
+        font-size: 12px;
+    }
+    
+    .skill-name {
+        padding-left: 3px;
+        font-size: 12px;
+        line-height: 1.2;
     }
     
     .weapon-headers, .weapon-row {
-        grid-template-columns: 1fr;
+        grid-template-columns: 1.5fr 60px 50px 50px 50px 80px auto;
+        gap: 3px;
+        font-size: 11px;
+        padding: 2px 0;
+    }
+    
+    .weapon-row input {
+        padding: 3px 2px;
+        font-size: 11px;
     }
     
     .talent-headers, .talent-row {
-        grid-template-columns: 1fr;
+        grid-template-columns: 2fr 40px 3fr auto;
+        gap: 3px;
+        font-size: 11px;
+        padding: 2px 0;
+    }
+    
+    .talent-row input, .talent-row textarea {
+        padding: 3px 2px;
+        font-size: 11px;
+        line-height: 1.2;
     }
     
     .armour-headers, .armour-row {
-        grid-template-columns: 1fr;
+        grid-template-columns: 1.5fr 50px 50px 50px 60px auto;
+        gap: 3px;
+        font-size: 11px;
+        padding: 2px 0;
+    }
+    
+    .armour-row input {
+        padding: 3px 2px;
+        font-size: 11px;
     }
     
     .spell-headers, .spell-row {
-        grid-template-columns: 1fr;
+        grid-template-columns: 1.5fr 40px 60px 60px 60px 2fr;
+        gap: 3px;
+        font-size: 11px;
+        padding: 2px 0;
     }
     
-    .wealth-grid, .encumbrance-grid {
+    .spell-row input, .spell-row textarea {
+        padding: 3px 2px;
+        font-size: 11px;
+        line-height: 1.2;
+    }
+    
+    /* Compact mobile layouts for wounds, wealth, and encumbrance */
+    .wound-track {
+        display: grid;
+        grid-template-columns: 1fr 1fr 1fr;
+        gap: 4px;
+    }
+    
+    .wound-track .wound-item:nth-child(4),
+    .wound-track .wound-item:nth-child(5) {
+        grid-column: span 1;
+    }
+    
+    /* Second row for Hardy and Wounds */
+    .wound-track .wound-item:nth-child(4) {
+        grid-column: 1;
+    }
+    
+    .wound-track .wound-item:nth-child(5) {
+        grid-column: 2 / -1;
+    }
+    
+    /* Wealth: 3 columns (D | SS | GC) */
+    .wealth-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr 1fr;
+        gap: 4px 6px;
+    }
+    
+    /* Encumbrance: 3 columns for first row, 2 columns for second row */
+    .encumbrance-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr 1fr;
+        gap: 4px 6px;
+    }
+    
+    .encumbrance-grid .enc-item:nth-child(4) {
+        grid-column: 1;
+    }
+    
+    .encumbrance-grid .enc-item:nth-child(5) {
+        grid-column: 2 / -1;
+    }
+    
+    /* Compact wound, wealth, and encumbrance items */
+    .wound-item, .wealth-item, .enc-item {
         flex-direction: column;
+        gap: 1px;
+        align-items: stretch;
+    }
+    
+    .wound-item label, .wealth-item label, .enc-item label {
+        font-size: 10px;
+        margin-bottom: 1px;
+        font-weight: 600;
+        line-height: 1;
+        min-width: auto;
+    }
+    
+    .wound-item input, .wealth-item input, .enc-item input {
+        height: 20px;
+        font-size: 11px;
+        padding: 1px 2px;
+        width: auto;
+    }
+    
+    /* Reduce section padding */
+    .wounds, .wealth {
+        padding: 6px;
+        margin-bottom: 8px;
+    }
+    
+    .wounds h3, .wealth h3 {
+        margin-bottom: 4px;
+        font-size: 13px;
+        padding-bottom: 2px;
+    }
+    
+    .wealth h4 {
+        margin: 8px 0 4px 0;
+        font-size: 12px;
+    }
+    
+    /* Reduce section spacing on mobile */
+    .skills, .characteristics, .combined-stats > div {
+        margin-bottom: 12px;
+    }
+    
+    .skills h3, .characteristics h3 {
+        margin-bottom: 6px;
+        font-size: 16px;
+        margin-top: 12px;
+    }
+    
+    /* Compact section headers */
+    .combat-section h3 {
+        margin-bottom: 4px;
+        font-size: 15px;
+        margin-top: 10px;
+    }
+    
+    /* Reduce padding in skill containers */
+    .skills-grid {
+        gap: 0px;
+    }
+    
+    /* Advanced skills specific optimizations */
+    .skills .advanced-skills-container {
+        margin-top: 8px;
+    }
+    
+    .add-buttons {
+        margin-top: 6px;
+    }
+    
+    /* Make edit buttons more compact */
+    button {
+        padding: 3px 6px;
+        font-size: 10px;
     }
 }
 
