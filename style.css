@@ -427,15 +427,7 @@ body {
     font-size: 12px;
 }
 
-.psychology-content textarea, .corruption-content textarea {
-    width: 100%;
-    min-height: 80px;
-    padding: 8px;
-    border: 1px solid #ccc;
-    border-radius: 3px;
-    font-size: 12px;
-    resize: vertical;
-}
+/* Psychology and Corruption sections now use grid layout similar to other editable sections */
 
 .wealth-grid, .encumbrance-grid {
     display: flex;
@@ -774,6 +766,171 @@ button:active {
 
 .spells-readonly .remove-button {
     display: none;
+}
+
+/* Psychology and Corruption Sections */
+.psychology-counter, .corruption-counter {
+    margin-bottom: 1rem;
+    display: flex;
+    gap: 1rem;
+}
+
+.counter-item {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.counter-item label {
+    font-weight: bold;
+    color: #8B4513;
+}
+
+.counter-item input {
+    padding: 4px;
+    border: 1px solid #ccc;
+    border-radius: 3px;
+    font-size: 12px;
+    width: 60px;
+}
+
+.psychology-grid, .corruption-grid {
+    display: flex;
+    flex-direction: column;
+    margin-bottom: 10px;
+}
+
+.psychology-headers, .corruption-headers {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 5px;
+    font-weight: bold;
+    text-align: center;
+    margin-bottom: 10px;
+    padding: 5px;
+    background-color: #f0f0f0;
+    border-radius: 3px;
+}
+
+.psychology-row, .corruption-row {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    gap: 5px;
+    align-items: center;
+    padding: 5px 0;
+    border-bottom: 1px solid #eee;
+}
+
+.psychology-row input, .corruption-row input {
+    padding: 4px;
+    border: 1px solid #ccc;
+    border-radius: 3px;
+    font-size: 12px;
+    min-height: 20px;
+}
+
+/* Psychology readonly mode */
+.psychology-readonly .add-buttons {
+    display: none;
+}
+
+.psychology-readonly .psychology-condition {
+    border: none;
+    background: none;
+    padding: 4px 0;
+    font-size: 12px;
+    color: #333;
+}
+
+.psychology-readonly .remove-button {
+    display: none;
+}
+
+.psychology-readonly .psychology-row {
+    grid-template-columns: 1fr;
+}
+
+/* Corruption readonly mode */
+.corruption-readonly .add-buttons {
+    display: none;
+}
+
+.corruption-readonly .corruption-mutation {
+    border: none;
+    background: none;
+    padding: 4px 0;
+    font-size: 12px;
+    color: #333;
+}
+
+.corruption-readonly .remove-button {
+    display: none;
+}
+
+.corruption-readonly .corruption-row {
+    grid-template-columns: 1fr;
+}
+
+/* Party and Motivation Edit Mode Styling */
+.party-readonly input,
+.party-readonly textarea {
+    background-color: #f9f9f9;
+    border: 1px solid #e0e0e0;
+    color: #666;
+    cursor: default;
+}
+
+.party-readonly input:focus,
+.party-readonly textarea:focus {
+    outline: none;
+    border-color: #e0e0e0;
+    box-shadow: none;
+}
+
+.motivation-readonly #motivation {
+    background-color: #f9f9f9;
+    border: 1px solid #e0e0e0;
+    color: #666;
+    cursor: default;
+}
+
+.motivation-readonly #motivation:focus {
+    outline: none;
+    border-color: #e0e0e0;
+    box-shadow: none;
+}
+
+/* Character Edit Mode Styling */
+.character-readonly input {
+    background-color: #f9f9f9;
+    border: 1px solid #e0e0e0;
+    color: #666;
+    cursor: default;
+}
+
+.character-readonly input:focus {
+    outline: none;
+    border-color: #e0e0e0;
+    box-shadow: none;
+}
+
+/* Make motivation field in character section span full width */
+.motivation-field {
+    grid-column: 1 / -1;
+}
+
+/* Ambitions Edit Mode Styling */
+.ambitions-readonly textarea {
+    background-color: #f9f9f9;
+    border: 1px solid #e0e0e0;
+    color: #666;
+    cursor: default;
+}
+
+.ambitions-readonly textarea:focus {
+    outline: none;
+    border-color: #e0e0e0;
+    box-shadow: none;
 }
 
 /* Mobile Characteristics Table Styling */

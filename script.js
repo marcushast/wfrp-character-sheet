@@ -692,9 +692,9 @@ class DOMSync {
             'party-long': 'party.long',
             'party-members': 'party.members',
             
-            // Other
-            'psychology': 'psychology',
-            'corruption': 'corruption',
+            // Psychology & Corruption
+            'psychology-points': 'psychology.points',
+            'corruption-points': 'corruption.points',
             
             // Wounds
             'sb': 'wounds.sb',
@@ -829,6 +829,11 @@ class WFRPCharacterSheet {
         this.armourEditMode = false;
         this.trappingsEditMode = false;
         this.spellsEditMode = false;
+        this.psychologyEditMode = false;
+        this.corruptionEditMode = false;
+        this.partyEditMode = false;
+        this.characterEditMode = false;
+        this.ambitionsEditMode = false;
         this.basicSkills = [
             { name: "Art", characteristic: "Dex" },
             { name: "Athletics", characteristic: "Ag" },
@@ -921,8 +926,14 @@ class WFRPCharacterSheet {
             armour: [],
             trappings: [],
             spells: [],
-            psychology: '',
-            corruption: '',
+            psychology: {
+                points: 0,
+                conditions: []
+            },
+            corruption: {
+                points: 0,
+                mutations: []
+            },
             wealth: { d: 0, ss: 0, gc: 0 },
             encumbrance: { weapons: 0, armour: 0, trappings: 0, max: 0, total: 0 }
         };
@@ -946,9 +957,33 @@ class WFRPCharacterSheet {
     mergeCharacterData(defaultData, savedData) {
         const merged = { ...defaultData };
         
+        // Handle backward compatibility for psychology and corruption
+        // Convert old string format to new object format if needed
+        if (savedData.psychology && typeof savedData.psychology === 'string') {
+            merged.psychology = {
+                points: 0,
+                conditions: savedData.psychology.trim() ? 
+                    [{ condition: savedData.psychology }] : []
+            };
+        }
+        
+        if (savedData.corruption && typeof savedData.corruption === 'string') {
+            merged.corruption = {
+                points: 0,
+                mutations: savedData.corruption.trim() ? 
+                    [{ mutation: savedData.corruption }] : []
+            };
+        }
+        
         // Merge top-level properties
         Object.keys(savedData).forEach(key => {
             if (savedData[key] !== null && savedData[key] !== undefined) {
+                // Skip psychology and corruption if we've already migrated them
+                if ((key === 'psychology' || key === 'corruption') && 
+                    typeof savedData[key] === 'string') {
+                    return; // Already handled above
+                }
+                
                 if (typeof savedData[key] === 'object' && !Array.isArray(savedData[key])) {
                     // For objects, recursively merge
                     merged[key] = { ...defaultData[key], ...savedData[key] };
@@ -980,6 +1015,13 @@ class WFRPCharacterSheet {
         this.populateArmour();
         this.populateTrappings();
         this.populateSpells();
+        this.populatePsychology();
+        this.populateCorruption();
+        
+        // Initialize edit modes to readonly
+        this.setPartyMode(false);
+        this.setCharacterMode(false);
+        this.setAmbitionsMode(false);
         
         // Then sync state to DOM (after elements exist)
         this.domSync.syncToDOM();
@@ -1797,6 +1839,433 @@ class WFRPCharacterSheet {
         this.setSpellsMode(!this.spellsEditMode);
     }
 
+    // Psychology Methods
+    populatePsychology() {
+        const container = document.getElementById('psychology-list');
+        container.innerHTML = '';
+        
+        if (this.character.psychology && this.character.psychology.conditions) {
+            this.character.psychology.conditions.forEach(condition => {
+                const conditionRow = document.createElement('div');
+                conditionRow.className = 'psychology-row';
+                this.createPsychologyRow(conditionRow, condition, false); // false = read-only mode
+                container.appendChild(conditionRow);
+                
+                // Add event listeners
+                this.addPsychologyEventListeners(conditionRow);
+            });
+        }
+        
+        // Set initial mode to read-only
+        this.setPsychologyMode(false);
+    }
+
+    createPsychologyRow(conditionRow, condition, editMode) {
+        if (editMode) {
+            conditionRow.innerHTML = `
+                <input type="text" class="psychology-condition" value="${condition.condition || ''}" placeholder="Psychology condition">
+                <button type="button" class="remove-button" onclick="this.parentElement.remove();">Remove</button>
+            `;
+        } else {
+            conditionRow.innerHTML = `
+                <div class="psychology-condition">${condition.condition || ''}</div>
+            `;
+        }
+    }
+
+    addPsychologyEventListeners(conditionRow) {
+        const inputs = conditionRow.querySelectorAll('input');
+        
+        inputs.forEach(input => {
+            if (!input.readOnly) {
+                input.addEventListener('input', () => {
+                    // Auto-save is handled by the edit mode toggle
+                });
+            }
+        });
+    }
+
+    savePsychologyConditions() {
+        const conditionRows = document.querySelectorAll('#psychology-list .psychology-row');
+        if (!this.character.psychology) {
+            this.character.psychology = { points: 0, conditions: [] };
+        }
+        this.character.psychology.conditions = [];
+        
+        conditionRows.forEach(row => {
+            const conditionElement = row.querySelector('.psychology-condition');
+            
+            // Get value based on element type (input vs div)
+            const condition = (conditionElement.tagName === 'INPUT') ? (conditionElement.value || '') : (conditionElement.textContent || '');
+            
+            if (condition.trim()) {
+                this.character.psychology.conditions.push({
+                    condition: condition
+                });
+            }
+        });
+        
+        this.saveCharacter();
+        console.log('Psychology conditions saved:', this.character.psychology.conditions);
+    }
+
+    setPsychologyMode(editMode) {
+        this.psychologyEditMode = editMode;
+        const psychologySection = document.getElementById('psychology-list').closest('.psychology');
+        const editButton = document.getElementById('edit-psychology');
+        
+        if (editMode) {
+            psychologySection.classList.remove('psychology-readonly');
+            psychologySection.classList.add('psychology-edit');
+            editButton.textContent = 'Save';
+        } else {
+            psychologySection.classList.add('psychology-readonly');
+            psychologySection.classList.remove('psychology-edit');
+            editButton.textContent = 'Edit';
+        }
+        
+        this.populatePsychologyInMode(editMode);
+    }
+
+    populatePsychologyInMode(editMode) {
+        const container = document.getElementById('psychology-list');
+        
+        if (!this.character.psychology || !this.character.psychology.conditions) {
+            if (!this.character.psychology) {
+                this.character.psychology = { points: 0, conditions: [] };
+            } else {
+                this.character.psychology.conditions = [];
+            }
+        }
+        
+        container.innerHTML = '';
+        this.character.psychology.conditions.forEach(condition => {
+            const conditionRow = document.createElement('div');
+            conditionRow.className = 'psychology-row';
+            this.createPsychologyRow(conditionRow, condition, editMode);
+            container.appendChild(conditionRow);
+            this.addPsychologyEventListeners(conditionRow);
+        });
+    }
+
+    togglePsychologyEditMode() {
+        if (this.psychologyEditMode) {
+            // Save when exiting edit mode
+            this.savePsychologyConditions();
+        }
+        this.setPsychologyMode(!this.psychologyEditMode);
+    }
+
+    // Corruption Methods
+    populateCorruption() {
+        const container = document.getElementById('corruption-list');
+        container.innerHTML = '';
+        
+        if (this.character.corruption && this.character.corruption.mutations) {
+            this.character.corruption.mutations.forEach(mutation => {
+                const mutationRow = document.createElement('div');
+                mutationRow.className = 'corruption-row';
+                this.createCorruptionRow(mutationRow, mutation, false); // false = read-only mode
+                container.appendChild(mutationRow);
+                
+                // Add event listeners
+                this.addCorruptionEventListeners(mutationRow);
+            });
+        }
+        
+        // Set initial mode to read-only
+        this.setCorruptionMode(false);
+    }
+
+    createCorruptionRow(mutationRow, mutation, editMode) {
+        if (editMode) {
+            mutationRow.innerHTML = `
+                <input type="text" class="corruption-mutation" value="${mutation.mutation || ''}" placeholder="Corruption/mutation">
+                <button type="button" class="remove-button" onclick="this.parentElement.remove();">Remove</button>
+            `;
+        } else {
+            mutationRow.innerHTML = `
+                <div class="corruption-mutation">${mutation.mutation || ''}</div>
+            `;
+        }
+    }
+
+    addCorruptionEventListeners(mutationRow) {
+        const inputs = mutationRow.querySelectorAll('input');
+        
+        inputs.forEach(input => {
+            if (!input.readOnly) {
+                input.addEventListener('input', () => {
+                    // Auto-save is handled by the edit mode toggle
+                });
+            }
+        });
+    }
+
+    saveCorruptionMutations() {
+        const mutationRows = document.querySelectorAll('#corruption-list .corruption-row');
+        if (!this.character.corruption) {
+            this.character.corruption = { points: 0, mutations: [] };
+        }
+        this.character.corruption.mutations = [];
+        
+        mutationRows.forEach(row => {
+            const mutationElement = row.querySelector('.corruption-mutation');
+            
+            // Get value based on element type (input vs div)
+            const mutation = (mutationElement.tagName === 'INPUT') ? (mutationElement.value || '') : (mutationElement.textContent || '');
+            
+            if (mutation.trim()) {
+                this.character.corruption.mutations.push({
+                    mutation: mutation
+                });
+            }
+        });
+        
+        this.saveCharacter();
+        console.log('Corruption mutations saved:', this.character.corruption.mutations);
+    }
+
+    setCorruptionMode(editMode) {
+        this.corruptionEditMode = editMode;
+        const corruptionSection = document.getElementById('corruption-list').closest('.corruption');
+        const editButton = document.getElementById('edit-corruption');
+        
+        if (editMode) {
+            corruptionSection.classList.remove('corruption-readonly');
+            corruptionSection.classList.add('corruption-edit');
+            editButton.textContent = 'Save';
+        } else {
+            corruptionSection.classList.add('corruption-readonly');
+            corruptionSection.classList.remove('corruption-edit');
+            editButton.textContent = 'Edit';
+        }
+        
+        this.populateCorruptionInMode(editMode);
+    }
+
+    populateCorruptionInMode(editMode) {
+        const container = document.getElementById('corruption-list');
+        
+        if (!this.character.corruption || !this.character.corruption.mutations) {
+            if (!this.character.corruption) {
+                this.character.corruption = { points: 0, mutations: [] };
+            } else {
+                this.character.corruption.mutations = [];
+            }
+        }
+        
+        container.innerHTML = '';
+        this.character.corruption.mutations.forEach(mutation => {
+            const mutationRow = document.createElement('div');
+            mutationRow.className = 'corruption-row';
+            this.createCorruptionRow(mutationRow, mutation, editMode);
+            container.appendChild(mutationRow);
+            this.addCorruptionEventListeners(mutationRow);
+        });
+    }
+
+    toggleCorruptionEditMode() {
+        if (this.corruptionEditMode) {
+            // Save when exiting edit mode
+            this.saveCorruptionMutations();
+        }
+        this.setCorruptionMode(!this.corruptionEditMode);
+    }
+
+    // Party Edit Mode Methods
+    togglePartyEditMode() {
+        if (this.partyEditMode) {
+            // Save when exiting edit mode
+            this.savePartyData();
+        }
+        this.setPartyMode(!this.partyEditMode);
+    }
+
+    savePartyData() {
+        // Explicitly update the character data from form fields
+        this.character.party.name = document.getElementById('party-name').value || '';
+        this.character.party.short = document.getElementById('party-short').value || '';
+        this.character.party.long = document.getElementById('party-long').value || '';
+        this.character.party.members = document.getElementById('party-members').value || '';
+        
+        // Save to localStorage
+        this.saveCharacter();
+        console.log('Party data saved:', this.character.party);
+    }
+
+    setPartyMode(editMode) {
+        this.partyEditMode = editMode;
+        const partySection = document.querySelector('.party');
+        const editButton = document.getElementById('edit-party');
+        
+        if (editMode) {
+            partySection.classList.remove('party-readonly');
+            partySection.classList.add('party-edit');
+            editButton.textContent = 'Save';
+            this.enablePartyFields();
+        } else {
+            partySection.classList.add('party-readonly');
+            partySection.classList.remove('party-edit');
+            editButton.textContent = 'Edit';
+            this.disablePartyFields();
+        }
+    }
+
+    enablePartyFields() {
+        const partyFields = ['party-name', 'party-short', 'party-long', 'party-members'];
+        partyFields.forEach(fieldId => {
+            const field = document.getElementById(fieldId);
+            if (field) {
+                field.readOnly = false;
+                field.disabled = false;
+            }
+        });
+    }
+
+    disablePartyFields() {
+        const partyFields = ['party-name', 'party-short', 'party-long', 'party-members'];
+        partyFields.forEach(fieldId => {
+            const field = document.getElementById(fieldId);
+            if (field) {
+                field.readOnly = true;
+                // Don't disable, just make readonly for better UX
+            }
+        });
+    }
+
+    // Character Edit Mode Methods  
+    toggleCharacterEditMode() {
+        if (this.characterEditMode) {
+            // Save when exiting edit mode
+            this.saveCharacterData();
+        }
+        this.setCharacterMode(!this.characterEditMode);
+    }
+
+    saveCharacterData() {
+        // Explicitly update the character data from form fields
+        this.character.name = document.getElementById('name').value || '';
+        this.character.species = document.getElementById('species').value || '';
+        this.character.class = document.getElementById('class').value || '';
+        this.character.career = document.getElementById('career').value || '';
+        this.character.careerLevel = document.getElementById('career-level').value || '';
+        this.character.careerPath = document.getElementById('career-path').value || '';
+        this.character.status = document.getElementById('status').value || '';
+        this.character.age = document.getElementById('age').value || '';
+        this.character.height = document.getElementById('height').value || '';
+        this.character.hair = document.getElementById('hair').value || '';
+        this.character.eyes = document.getElementById('eyes').value || '';
+        this.character.motivation = document.getElementById('motivation').value || '';
+        
+        // Save to localStorage
+        this.saveCharacter();
+        console.log('Character data saved:', {
+            name: this.character.name,
+            species: this.character.species,
+            motivation: this.character.motivation
+        });
+    }
+
+    setCharacterMode(editMode) {
+        this.characterEditMode = editMode;
+        const characterSection = document.querySelector('.character-info');
+        const editButton = document.getElementById('edit-character');
+        
+        if (editMode) {
+            characterSection.classList.remove('character-readonly');
+            characterSection.classList.add('character-edit');
+            editButton.textContent = 'Save';
+            this.enableCharacterFields();
+        } else {
+            characterSection.classList.add('character-readonly');
+            characterSection.classList.remove('character-edit');
+            editButton.textContent = 'Edit';
+            this.disableCharacterFields();
+        }
+    }
+
+    enableCharacterFields() {
+        const characterFields = ['name', 'species', 'class', 'career', 'career-level', 'career-path', 'status', 'age', 'height', 'hair', 'eyes', 'motivation'];
+        characterFields.forEach(fieldId => {
+            const field = document.getElementById(fieldId);
+            if (field) {
+                field.readOnly = false;
+                field.disabled = false;
+            }
+        });
+    }
+
+    disableCharacterFields() {
+        const characterFields = ['name', 'species', 'class', 'career', 'career-level', 'career-path', 'status', 'age', 'height', 'hair', 'eyes', 'motivation'];
+        characterFields.forEach(fieldId => {
+            const field = document.getElementById(fieldId);
+            if (field) {
+                field.readOnly = true;
+                // Don't disable, just make readonly for better UX
+            }
+        });
+    }
+
+    // Ambitions Edit Mode Methods
+    toggleAmbitionsEditMode() {
+        if (this.ambitionsEditMode) {
+            // Save when exiting edit mode
+            this.saveAmbitionsData();
+        }
+        this.setAmbitionsMode(!this.ambitionsEditMode);
+    }
+
+    saveAmbitionsData() {
+        // Explicitly update the character data from form fields
+        this.character.ambitions.short = document.getElementById('short-ambition').value || '';
+        this.character.ambitions.long = document.getElementById('long-ambition').value || '';
+        
+        // Save to localStorage
+        this.saveCharacter();
+        console.log('Ambitions data saved:', this.character.ambitions);
+    }
+
+    setAmbitionsMode(editMode) {
+        this.ambitionsEditMode = editMode;
+        const ambitionsSection = document.querySelector('.ambitions');
+        const editButton = document.getElementById('edit-ambitions');
+        
+        if (editMode) {
+            ambitionsSection.classList.remove('ambitions-readonly');
+            ambitionsSection.classList.add('ambitions-edit');
+            editButton.textContent = 'Save';
+            this.enableAmbitionsFields();
+        } else {
+            ambitionsSection.classList.add('ambitions-readonly');
+            ambitionsSection.classList.remove('ambitions-edit');
+            editButton.textContent = 'Edit';
+            this.disableAmbitionsFields();
+        }
+    }
+
+    enableAmbitionsFields() {
+        const ambitionFields = ['short-ambition', 'long-ambition'];
+        ambitionFields.forEach(fieldId => {
+            const field = document.getElementById(fieldId);
+            if (field) {
+                field.readOnly = false;
+                field.disabled = false;
+            }
+        });
+    }
+
+    disableAmbitionsFields() {
+        const ambitionFields = ['short-ambition', 'long-ambition'];
+        ambitionFields.forEach(fieldId => {
+            const field = document.getElementById(fieldId);
+            if (field) {
+                field.readOnly = true;
+                // Don't disable, just make readonly for better UX
+            }
+        });
+    }
+
     populateOtherSections() {
         // Ambitions
         document.getElementById('short-ambition').value = this.character.ambitions.short || '';
@@ -1808,9 +2277,7 @@ class WFRPCharacterSheet {
         document.getElementById('party-long').value = this.character.party.long || '';
         document.getElementById('party-members').value = this.character.party.members || '';
         
-        // Psychology and Corruption
-        document.getElementById('psychology').value = this.character.psychology || '';
-        document.getElementById('corruption').value = this.character.corruption || '';
+        // Psychology and Corruption are now handled by dedicated populate methods
         
         // Wounds
         document.getElementById('sb').value = this.character.wounds.sb || 0;
@@ -2174,6 +2641,56 @@ function toggleSpellsEditMode() {
     window.characterSheet.toggleSpellsEditMode();
 }
 
+function togglePsychologyEditMode() {
+    window.characterSheet.togglePsychologyEditMode();
+}
+
+function toggleCorruptionEditMode() {
+    window.characterSheet.toggleCorruptionEditMode();
+}
+
+function togglePartyEditMode() {
+    window.characterSheet.togglePartyEditMode();
+}
+
+function toggleCharacterEditMode() {
+    window.characterSheet.toggleCharacterEditMode();
+}
+
+function toggleAmbitionsEditMode() {
+    window.characterSheet.toggleAmbitionsEditMode();
+}
+
+function addPsychologyCondition() {
+    if (!window.characterSheet.psychologyEditMode) {
+        return;
+    }
+    
+    const container = document.getElementById('psychology-list');
+    const conditionRow = document.createElement('div');
+    conditionRow.className = 'psychology-row';
+    conditionRow.innerHTML = `
+        <input type="text" class="psychology-condition" placeholder="Psychology condition">
+        <button type="button" class="remove-button" onclick="this.parentElement.remove();">Remove</button>
+    `;
+    container.appendChild(conditionRow);
+}
+
+function addCorruptionMutation() {
+    if (!window.characterSheet.corruptionEditMode) {
+        return;
+    }
+    
+    const container = document.getElementById('corruption-list');
+    const mutationRow = document.createElement('div');
+    mutationRow.className = 'corruption-row';
+    mutationRow.innerHTML = `
+        <input type="text" class="corruption-mutation" placeholder="Corruption/mutation">
+        <button type="button" class="remove-button" onclick="this.parentElement.remove();">Remove</button>
+    `;
+    container.appendChild(mutationRow);
+}
+
 // Import/Export Functions
 function exportCharacter() {
     const exportModal = document.getElementById('export-modal');
@@ -2262,6 +2779,8 @@ function confirmImport() {
         window.characterSheet.populateArmour();
         window.characterSheet.populateTrappings();
         window.characterSheet.populateSpells();
+        window.characterSheet.populatePsychology();
+        window.characterSheet.populateCorruption();
         
         // Force sync to DOM to ensure all computed values are updated
         window.characterSheet.domSync.syncToDOM();

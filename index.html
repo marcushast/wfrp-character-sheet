@@ -18,7 +18,10 @@
         </header>
         
         <div class="character-info">
-            <h3>Character</h3>
+            <div class="section-header">
+                <h3>Character</h3>
+                <button type="button" id="edit-character" onclick="toggleCharacterEditMode()">Edit</button>
+            </div>
             <div class="info-row">
                 <div class="field">
                     <label>Name:</label>
@@ -71,6 +74,12 @@
                     <input type="text" id="eyes" name="eyes">
                 </div>
             </div>
+            <div class="info-row">
+                <div class="field motivation-field">
+                    <label>Motivation:</label>
+                    <input type="text" id="motivation" name="motivation">
+                </div>
+            </div>
         </div>
 
         <div class="sheet-main">
@@ -99,10 +108,6 @@
                         <div class="stat-item">
                             <label>Resolve:</label>
                             <input type="number" id="resolve" name="resolve">
-                        </div>
-                        <div class="stat-item">
-                            <label>Motivation:</label>
-                            <input type="text" id="motivation" name="motivation">
                         </div>
                     </div>
                 </div>
@@ -473,21 +478,54 @@
             </div>
 
             <div class="psychology">
-                <h3>Psychology</h3>
-                <div class="psychology-content">
-                    <textarea id="psychology" name="psychology" placeholder="Psychology traits and conditions"></textarea>
+                <div class="section-header">
+                    <h3>Psychology</h3>
+                    <button type="button" id="edit-psychology" onclick="togglePsychologyEditMode()">Edit</button>
+                </div>
+                <div class="psychology-counter">
+                    <div class="counter-item">
+                        <label>Psychology Points:</label>
+                        <input type="number" id="psychology-points" name="psychology-points" min="0">
+                    </div>
+                </div>
+                <div class="psychology-grid">
+                    <div class="psychology-headers">
+                        <div>Psychology Conditions</div>
+                    </div>
+                    <div class="psychology-list" id="psychology-list"></div>
+                </div>
+                <div class="add-buttons">
+                    <button type="button" onclick="addPsychologyCondition()">Add Psychology Condition</button>
                 </div>
             </div>
 
             <div class="corruption">
-                <h3>Corruption & Mutation</h3>
-                <div class="corruption-content">
-                    <textarea id="corruption" name="corruption" placeholder="Corruption points and mutations"></textarea>
+                <div class="section-header">
+                    <h3>Corruption & Mutation</h3>
+                    <button type="button" id="edit-corruption" onclick="toggleCorruptionEditMode()">Edit</button>
+                </div>
+                <div class="corruption-counter">
+                    <div class="counter-item">
+                        <label>Corruption Points:</label>
+                        <input type="number" id="corruption-points" name="corruption-points" min="0">
+                    </div>
+                </div>
+                <div class="corruption-grid">
+                    <div class="corruption-headers">
+                        <div>Corruption & Mutations</div>
+                    </div>
+                    <div class="corruption-list" id="corruption-list"></div>
+                </div>
+                <div class="add-buttons">
+                    <button type="button" onclick="addCorruptionMutation()">Add Corruption/Mutation</button>
                 </div>
             </div>
 
             <div class="ambitions">
-                <h3>Ambitions</h3>
+                <div class="section-header">
+                    <h3>Ambitions</h3>
+                    <button type="button" id="edit-ambitions" onclick="toggleAmbitionsEditMode()">Edit</button>
+                </div>
                 <div class="ambition-group">
                     <div class="ambition-item">
                         <label>Short term:</label>
@@ -501,7 +539,10 @@
             </div>
 
             <div class="party">
-                <h3>Party</h3>
+                <div class="section-header">
+                    <h3>Party</h3>
+                    <button type="button" id="edit-party" onclick="togglePartyEditMode()">Edit</button>
+                </div>
                 <div class="party-group">
                     <div class="party-item">
                         <label>Party Name:</label>
