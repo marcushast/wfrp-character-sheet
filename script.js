@@ -1389,18 +1389,18 @@ class WFRPCharacterSheet {
             armourRow.innerHTML = `
                 <input type="text" placeholder="Armour name" class="armour-name" value="${armour.name || ''}">
                 <input type="text" placeholder="Locations" class="armour-locations" value="${armour.locations || ''}">
-                <input type="number" placeholder="0" class="armour-enc" value="${armour.enc || 0}">
-                <input type="number" placeholder="0" class="armour-ap" value="${armour.ap || 0}">
+                <input type="text" placeholder="0" class="armour-enc" value="${armour.enc || ''}">
+                <input type="text" placeholder="0" class="armour-ap" value="${armour.ap || ''}">
                 <input type="text" placeholder="Qualities" class="armour-qualities" value="${armour.qualities || ''}">
                 <button type="button" class="remove-button" onclick="this.parentElement.remove();">Remove</button>
             `;
         } else {
             armourRow.innerHTML = `
-                <input type="text" readonly class="armour-name" value="${armour.name || ''}">
-                <input type="text" readonly class="armour-locations" value="${armour.locations || ''}">
-                <input type="number" readonly class="armour-enc" value="${armour.enc || 0}">
-                <input type="number" readonly class="armour-ap" value="${armour.ap || 0}">
-                <input type="text" readonly class="armour-qualities" value="${armour.qualities || ''}">
+                <div class="armour-name">${armour.name || ''}</div>
+                <div class="armour-locations">${armour.locations || ''}</div>
+                <div class="armour-enc">${armour.enc || ''}</div>
+                <div class="armour-ap">${armour.ap || ''}</div>
+                <div class="armour-qualities">${armour.qualities || ''}</div>
                 <span class="remove-button"></span>
             `;
         }
@@ -1436,20 +1436,21 @@ class WFRPCharacterSheet {
         
         armourRows.forEach((armourRow, index) => {
             // Get current values before repopulating
-            const nameInput = armourRow.querySelector('.armour-name');
-            const locationsInput = armourRow.querySelector('.armour-locations');
-            const encInput = armourRow.querySelector('.armour-enc');
-            const apInput = armourRow.querySelector('.armour-ap');
-            const qualitiesInput = armourRow.querySelector('.armour-qualities');
+            const nameElement = armourRow.querySelector('.armour-name');
+            const locationsElement = armourRow.querySelector('.armour-locations');
+            const encElement = armourRow.querySelector('.armour-enc');
+            const apElement = armourRow.querySelector('.armour-ap');
+            const qualitiesElement = armourRow.querySelector('.armour-qualities');
             
-            let armour = this.character.armour[index] || { name: '', locations: '', enc: 0, ap: 0, qualities: '' };
+            let armour = this.character.armour[index] || { name: '', locations: '', enc: '', ap: '', qualities: '' };
             
-            if (nameInput && locationsInput && encInput && apInput && qualitiesInput) {
-                armour.name = nameInput.value;
-                armour.locations = locationsInput.value;
-                armour.enc = parseInt(encInput.value) || 0;
-                armour.ap = parseInt(apInput.value) || 0;
-                armour.qualities = qualitiesInput.value;
+            // Update armour data from current elements (only if they're inputs)
+            if (nameElement && nameElement.tagName === 'INPUT') {
+                armour.name = nameElement.value || '';
+                armour.locations = locationsElement.value || '';
+                armour.enc = encElement.value || '';
+                armour.ap = apElement.value || '';
+                armour.qualities = qualitiesElement.value || '';
                 
                 // Update the array
                 this.character.armour[index] = armour;
@@ -1477,11 +1478,18 @@ class WFRPCharacterSheet {
         this.character.armour = [];
         
         armourRows.forEach(row => {
-            const name = row.querySelector('.armour-name').value || '';
-            const locations = row.querySelector('.armour-locations').value || '';
-            const enc = parseInt(row.querySelector('.armour-enc').value) || 0;
-            const ap = parseInt(row.querySelector('.armour-ap').value) || 0;
-            const qualities = row.querySelector('.armour-qualities').value || '';
+            const nameElement = row.querySelector('.armour-name');
+            const locationsElement = row.querySelector('.armour-locations');
+            const encElement = row.querySelector('.armour-enc');
+            const apElement = row.querySelector('.armour-ap');
+            const qualitiesElement = row.querySelector('.armour-qualities');
+            
+            // Get values based on element type (input vs div)
+            const name = nameElement.tagName === 'INPUT' ? (nameElement.value || '') : (nameElement.textContent || '');
+            const locations = locationsElement.tagName === 'INPUT' ? (locationsElement.value || '') : (locationsElement.textContent || '');
+            const enc = encElement.tagName === 'INPUT' ? (encElement.value || '') : (encElement.textContent || '');
+            const ap = apElement.tagName === 'INPUT' ? (apElement.value || '') : (apElement.textContent || '');
+            const qualities = qualitiesElement.tagName === 'INPUT' ? (qualitiesElement.value || '') : (qualitiesElement.textContent || '');
             
             // Always save the armour, even if empty, to maintain the row
             this.character.armour.push({
@@ -1529,13 +1537,13 @@ class WFRPCharacterSheet {
         if (editMode) {
             trappingRow.innerHTML = `
                 <input type="text" placeholder="Trapping name" class="trapping-name" value="${trapping.name || ''}">
-                <input type="number" placeholder="0" class="trapping-enc" value="${trapping.enc || 0}">
+                <input type="text" placeholder="0" class="trapping-enc" value="${trapping.enc || ''}">
                 <button type="button" class="remove-button" onclick="this.parentElement.remove();">Remove</button>
             `;
         } else {
             trappingRow.innerHTML = `
-                <input type="text" readonly class="trapping-name" value="${trapping.name || ''}">
-                <input type="number" readonly class="trapping-enc" value="${trapping.enc || 0}">
+                <div class="trapping-name">${trapping.name || ''}</div>
+                <div class="trapping-enc">${trapping.enc || ''}</div>
                 <span class="remove-button"></span>
             `;
         }
@@ -1571,14 +1579,15 @@ class WFRPCharacterSheet {
         
         trappingRows.forEach((trappingRow, index) => {
             // Get current values before repopulating
-            const nameInput = trappingRow.querySelector('.trapping-name');
-            const encInput = trappingRow.querySelector('.trapping-enc');
+            const nameElement = trappingRow.querySelector('.trapping-name');
+            const encElement = trappingRow.querySelector('.trapping-enc');
             
-            let trapping = this.character.trappings[index] || { name: '', enc: 0 };
+            let trapping = this.character.trappings[index] || { name: '', enc: '' };
             
-            if (nameInput && encInput) {
-                trapping.name = nameInput.value;
-                trapping.enc = parseInt(encInput.value) || 0;
+            // Update trapping data from current elements (only if they're inputs)
+            if (nameElement && nameElement.tagName === 'INPUT') {
+                trapping.name = nameElement.value || '';
+                trapping.enc = encElement.value || '';
                 
                 // Update the array
                 this.character.trappings[index] = trapping;
@@ -1606,8 +1615,12 @@ class WFRPCharacterSheet {
         this.character.trappings = [];
         
         trappingRows.forEach(row => {
-            const name = row.querySelector('.trapping-name').value || '';
-            const enc = parseInt(row.querySelector('.trapping-enc').value) || 0;
+            const nameElement = row.querySelector('.trapping-name');
+            const encElement = row.querySelector('.trapping-enc');
+            
+            // Get values based on element type (input vs div)
+            const name = nameElement.tagName === 'INPUT' ? (nameElement.value || '') : (nameElement.textContent || '');
+            const enc = encElement.tagName === 'INPUT' ? (encElement.value || '') : (encElement.textContent || '');
             
             // Always save the trapping, even if empty, to maintain the row
             this.character.trappings.push({
@@ -1652,7 +1665,7 @@ class WFRPCharacterSheet {
         if (editMode) {
             spellRow.innerHTML = `
                 <input type="text" placeholder="Spell/Prayer name" class="spell-name" value="${spell.name || ''}">
-                <input type="number" placeholder="0" class="spell-cn" value="${spell.cn || 0}">
+                <input type="text" placeholder="0" class="spell-cn" value="${spell.cn || ''}">
                 <input type="text" placeholder="Range" class="spell-range" value="${spell.range || ''}">
                 <input type="text" placeholder="Target" class="spell-target" value="${spell.target || ''}">
                 <input type="text" placeholder="Duration" class="spell-duration" value="${spell.duration || ''}">
@@ -1661,12 +1674,12 @@ class WFRPCharacterSheet {
             `;
         } else {
             spellRow.innerHTML = `
-                <input type="text" readonly class="spell-name" value="${spell.name || ''}">
-                <input type="number" readonly class="spell-cn" value="${spell.cn || 0}">
-                <input type="text" readonly class="spell-range" value="${spell.range || ''}">
-                <input type="text" readonly class="spell-target" value="${spell.target || ''}">
-                <input type="text" readonly class="spell-duration" value="${spell.duration || ''}">
-                <textarea readonly class="spell-effect">${spell.effect || ''}</textarea>
+                <div class="spell-name">${spell.name || ''}</div>
+                <div class="spell-cn">${spell.cn || ''}</div>
+                <div class="spell-range">${spell.range || ''}</div>
+                <div class="spell-target">${spell.target || ''}</div>
+                <div class="spell-duration">${spell.duration || ''}</div>
+                <div class="spell-effect">${spell.effect || ''}</div>
                 <span class="remove-button"></span>
             `;
         }
@@ -1702,22 +1715,23 @@ class WFRPCharacterSheet {
         
         spellRows.forEach((spellRow, index) => {
             // Get current values before repopulating
-            const nameInput = spellRow.querySelector('.spell-name');
-            const cnInput = spellRow.querySelector('.spell-cn');
-            const rangeInput = spellRow.querySelector('.spell-range');
-            const targetInput = spellRow.querySelector('.spell-target');
-            const durationInput = spellRow.querySelector('.spell-duration');
-            const effectInput = spellRow.querySelector('.spell-effect');
+            const nameElement = spellRow.querySelector('.spell-name');
+            const cnElement = spellRow.querySelector('.spell-cn');
+            const rangeElement = spellRow.querySelector('.spell-range');
+            const targetElement = spellRow.querySelector('.spell-target');
+            const durationElement = spellRow.querySelector('.spell-duration');
+            const effectElement = spellRow.querySelector('.spell-effect');
             
-            let spell = this.character.spells[index] || { name: '', cn: 0, range: '', target: '', duration: '', effect: '' };
+            let spell = this.character.spells[index] || { name: '', cn: '', range: '', target: '', duration: '', effect: '' };
             
-            if (nameInput && cnInput && rangeInput && targetInput && durationInput && effectInput) {
-                spell.name = nameInput.value;
-                spell.cn = parseInt(cnInput.value) || 0;
-                spell.range = rangeInput.value;
-                spell.target = targetInput.value;
-                spell.duration = durationInput.value;
-                spell.effect = effectInput.value;
+            // Update spell data from current elements (only if they're inputs)
+            if (nameElement && (nameElement.tagName === 'INPUT' || nameElement.tagName === 'TEXTAREA')) {
+                spell.name = nameElement.value || '';
+                spell.cn = cnElement.value || '';
+                spell.range = rangeElement.value || '';
+                spell.target = targetElement.value || '';
+                spell.duration = durationElement.value || '';
+                spell.effect = effectElement.value || '';
                 
                 // Update the array
                 this.character.spells[index] = spell;
@@ -1745,12 +1759,20 @@ class WFRPCharacterSheet {
         this.character.spells = [];
         
         spellRows.forEach(row => {
-            const name = row.querySelector('.spell-name').value || '';
-            const cn = parseInt(row.querySelector('.spell-cn').value) || 0;
-            const range = row.querySelector('.spell-range').value || '';
-            const target = row.querySelector('.spell-target').value || '';
-            const duration = row.querySelector('.spell-duration').value || '';
-            const effect = row.querySelector('.spell-effect').value || '';
+            const nameElement = row.querySelector('.spell-name');
+            const cnElement = row.querySelector('.spell-cn');
+            const rangeElement = row.querySelector('.spell-range');
+            const targetElement = row.querySelector('.spell-target');
+            const durationElement = row.querySelector('.spell-duration');
+            const effectElement = row.querySelector('.spell-effect');
+            
+            // Get values based on element type (input/textarea vs div)
+            const name = (nameElement.tagName === 'INPUT' || nameElement.tagName === 'TEXTAREA') ? (nameElement.value || '') : (nameElement.textContent || '');
+            const cn = (cnElement.tagName === 'INPUT' || cnElement.tagName === 'TEXTAREA') ? (cnElement.value || '') : (cnElement.textContent || '');
+            const range = (rangeElement.tagName === 'INPUT' || rangeElement.tagName === 'TEXTAREA') ? (rangeElement.value || '') : (rangeElement.textContent || '');
+            const target = (targetElement.tagName === 'INPUT' || targetElement.tagName === 'TEXTAREA') ? (targetElement.value || '') : (targetElement.textContent || '');
+            const duration = (durationElement.tagName === 'INPUT' || durationElement.tagName === 'TEXTAREA') ? (durationElement.value || '') : (durationElement.textContent || '');
+            const effect = (effectElement.tagName === 'INPUT' || effectElement.tagName === 'TEXTAREA') ? (effectElement.value || '') : (effectElement.textContent || '');
             
             // Always save the spell, even if empty, to maintain the row
             this.character.spells.push({

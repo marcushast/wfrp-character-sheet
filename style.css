@@ -721,10 +721,13 @@ button:active {
 .armour-readonly .armour-enc,
 .armour-readonly .armour-ap,
 .armour-readonly .armour-qualities {
-    background-color: #f9f9f9;
-    border: 1px solid #e0e0e0;
-    color: #666;
-    cursor: not-allowed;
+    padding: 8px;
+    min-height: 16px;
+    line-height: 1.2;
+    color: #333;
+    background-color: transparent;
+    border: none;
+    cursor: default;
 }
 
 .armour-readonly .remove-button {
@@ -737,10 +740,13 @@ button:active {
 
 .trappings-readonly .trapping-name,
 .trappings-readonly .trapping-enc {
-    background-color: #f9f9f9;
-    border: 1px solid #e0e0e0;
-    color: #666;
-    cursor: not-allowed;
+    padding: 8px;
+    min-height: 16px;
+    line-height: 1.2;
+    color: #333;
+    background-color: transparent;
+    border: none;
+    cursor: default;
 }
 
 .trappings-readonly .remove-button {
@@ -757,10 +763,13 @@ button:active {
 .spells-readonly .spell-target,
 .spells-readonly .spell-duration,
 .spells-readonly .spell-effect {
-    background-color: #f9f9f9;
-    border: 1px solid #e0e0e0;
-    color: #666;
-    cursor: not-allowed;
+    padding: 8px;
+    min-height: 16px;
+    line-height: 1.2;
+    color: #333;
+    background-color: transparent;
+    border: none;
+    cursor: default;
 }
 
 .spells-readonly .remove-button {
