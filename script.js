@@ -1233,7 +1233,7 @@ class WFRPCharacterSheet {
             weaponRow.innerHTML = `
                 <input type="text" placeholder="Weapon name" class="weapon-name" value="${weapon.name || ''}">
                 <input type="text" placeholder="Group" class="weapon-group" value="${weapon.group || ''}">
-                <input type="number" placeholder="0" class="weapon-enc" value="${weapon.enc || 0}">
+                <input type="text" placeholder="0" class="weapon-enc" value="${weapon.enc || ''}">
                 <input type="text" placeholder="Range/Reach" class="weapon-range" value="${weapon.range || ''}">
                 <input type="text" placeholder="Damage" class="weapon-damage" value="${weapon.damage || ''}">
                 <input type="text" placeholder="Qualities" class="weapon-qualities" value="${weapon.qualities || ''}">
@@ -1241,12 +1241,12 @@ class WFRPCharacterSheet {
             `;
         } else {
             weaponRow.innerHTML = `
-                <input type="text" readonly class="weapon-name" value="${weapon.name || ''}">
-                <input type="text" readonly class="weapon-group" value="${weapon.group || ''}">
-                <input type="number" readonly class="weapon-enc" value="${weapon.enc || 0}">
-                <input type="text" readonly class="weapon-range" value="${weapon.range || ''}">
-                <input type="text" readonly class="weapon-damage" value="${weapon.damage || ''}">
-                <input type="text" readonly class="weapon-qualities" value="${weapon.qualities || ''}">
+                <div class="weapon-name">${weapon.name || ''}</div>
+                <div class="weapon-group">${weapon.group || ''}</div>
+                <div class="weapon-enc">${weapon.enc || ''}</div>
+                <div class="weapon-range">${weapon.range || ''}</div>
+                <div class="weapon-damage">${weapon.damage || ''}</div>
+                <div class="weapon-qualities">${weapon.qualities || ''}</div>
                 <span class="remove-button"></span>
             `;
         }
@@ -1282,22 +1282,23 @@ class WFRPCharacterSheet {
         
         weaponRows.forEach((weaponRow, index) => {
             // Get current values before repopulating
-            const nameInput = weaponRow.querySelector('.weapon-name');
-            const groupInput = weaponRow.querySelector('.weapon-group');
-            const encInput = weaponRow.querySelector('.weapon-enc');
-            const rangeInput = weaponRow.querySelector('.weapon-range');
-            const damageInput = weaponRow.querySelector('.weapon-damage');
-            const qualitiesInput = weaponRow.querySelector('.weapon-qualities');
+            const nameElement = weaponRow.querySelector('.weapon-name');
+            const groupElement = weaponRow.querySelector('.weapon-group');
+            const encElement = weaponRow.querySelector('.weapon-enc');
+            const rangeElement = weaponRow.querySelector('.weapon-range');
+            const damageElement = weaponRow.querySelector('.weapon-damage');
+            const qualitiesElement = weaponRow.querySelector('.weapon-qualities');
             
-            let weapon = this.character.weapons[index] || { name: '', group: '', enc: 0, range: '', damage: '', qualities: '' };
+            let weapon = this.character.weapons[index] || { name: '', group: '', enc: '', range: '', damage: '', qualities: '' };
             
-            if (nameInput && groupInput && encInput && rangeInput && damageInput && qualitiesInput) {
-                weapon.name = nameInput.value;
-                weapon.group = groupInput.value;
-                weapon.enc = parseInt(encInput.value) || 0;
-                weapon.range = rangeInput.value;
-                weapon.damage = damageInput.value;
-                weapon.qualities = qualitiesInput.value;
+            // Update weapon data from current elements (only if they're inputs)
+            if (nameElement && nameElement.tagName === 'INPUT') {
+                weapon.name = nameElement.value || '';
+                weapon.group = groupElement.value || '';
+                weapon.enc = encElement.value || '';
+                weapon.range = rangeElement.value || '';
+                weapon.damage = damageElement.value || '';
+                weapon.qualities = qualitiesElement.value || '';
                 
                 // Update the array
                 this.character.weapons[index] = weapon;
@@ -1325,12 +1326,20 @@ class WFRPCharacterSheet {
         this.character.weapons = [];
         
         weaponRows.forEach(row => {
-            const name = row.querySelector('.weapon-name').value || '';
-            const group = row.querySelector('.weapon-group').value || '';
-            const enc = parseInt(row.querySelector('.weapon-enc').value) || 0;
-            const range = row.querySelector('.weapon-range').value || '';
-            const damage = row.querySelector('.weapon-damage').value || '';
-            const qualities = row.querySelector('.weapon-qualities').value || '';
+            const nameElement = row.querySelector('.weapon-name');
+            const groupElement = row.querySelector('.weapon-group');
+            const encElement = row.querySelector('.weapon-enc');
+            const rangeElement = row.querySelector('.weapon-range');
+            const damageElement = row.querySelector('.weapon-damage');
+            const qualitiesElement = row.querySelector('.weapon-qualities');
+            
+            // Get values based on element type (input vs div)
+            const name = nameElement.tagName === 'INPUT' ? (nameElement.value || '') : (nameElement.textContent || '');
+            const group = groupElement.tagName === 'INPUT' ? (groupElement.value || '') : (groupElement.textContent || '');
+            const enc = encElement.tagName === 'INPUT' ? (encElement.value || '') : (encElement.textContent || '');
+            const range = rangeElement.tagName === 'INPUT' ? (rangeElement.value || '') : (rangeElement.textContent || '');
+            const damage = damageElement.tagName === 'INPUT' ? (damageElement.value || '') : (damageElement.textContent || '');
+            const qualities = qualitiesElement.tagName === 'INPUT' ? (qualitiesElement.value || '') : (qualitiesElement.textContent || '');
             
             // Always save the weapon, even if empty, to maintain the row
             this.character.weapons.push({

@@ -591,7 +591,7 @@ body {
 
 .weapon-headers {
     display: grid;
-    grid-template-columns: 2fr 1fr 1fr 1fr 1fr 2fr;
+    grid-template-columns: 2fr 1fr 1fr 1.5fr 1fr 2fr;
     gap: 5px;
     font-weight: bold;
     text-align: center;
@@ -603,7 +603,7 @@ body {
 
 .weapon-row {
     display: grid;
-    grid-template-columns: 2fr 1fr 1fr 1fr 1fr 2fr auto;
+    grid-template-columns: 2fr 1fr 1fr 1.5fr 1fr 2fr auto;
     gap: 5px;
     align-items: center;
     padding: 5px 0;
@@ -699,10 +699,13 @@ button:active {
 .weapons-readonly .weapon-range,
 .weapons-readonly .weapon-damage,
 .weapons-readonly .weapon-qualities {
-    background-color: #f9f9f9;
-    border: 1px solid #e0e0e0;
-    color: #666;
-    cursor: not-allowed;
+    padding: 8px;
+    min-height: 16px;
+    line-height: 1.2;
+    color: #333;
+    background-color: transparent;
+    border: none;
+    cursor: default;
 }
 
 .weapons-readonly .remove-button {
@@ -923,7 +926,7 @@ button:active {
     }
     
     .weapon-headers, .weapon-row {
-        grid-template-columns: 1.5fr 60px 50px 50px 50px 80px auto;
+        grid-template-columns: 1.5fr 60px 50px 70px 50px 80px auto;
         gap: 3px;
         font-size: 11px;
         padding: 2px 0;
